@@ -11,6 +11,9 @@
 #include "edge.h"
 #include "enumtypes.h"
 
+/* FIXME: Choosing a backend in compile time? */
+#include "mock-edge-backend.h"
+
 typedef struct
 {
 } ChamgeEdgeBackendPrivate;
@@ -33,5 +36,5 @@ chamge_edge_backend_init (ChamgeEdgeBackend * self)
 ChamgeEdgeBackend *
 chamge_edge_backend_new (void)
 {
-  return NULL;
+  return g_object_new (CHAMGE_TYPE_MOCK_EDGE_BACKEND, NULL);
 }

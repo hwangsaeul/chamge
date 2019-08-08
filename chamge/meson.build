@@ -15,6 +15,7 @@ source_c = [
   'edge.c',
   'node-backend.c',
   'edge-backend.c',
+  'mock-edge-backend.c',
 ]
 
 install_headers(source_h, subdir: chamge_install_header_subdir)
