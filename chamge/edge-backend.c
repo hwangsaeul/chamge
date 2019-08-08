@@ -14,13 +14,9 @@
 /* FIXME: Choosing a backend in compile time? */
 #include "mock-edge-backend.h"
 
-typedef struct
-{
-} ChamgeEdgeBackendPrivate;
-
 /* *INDENT-OFF* */
-G_DEFINE_ABSTRACT_TYPE_WITH_CODE (ChamgeEdgeBackend, chamge_edge_backend, CHAMGE_TYPE_NODE_BACKEND,
-                                  G_ADD_PRIVATE (ChamgeEdgeBackend))
+G_DEFINE_ABSTRACT_TYPE (ChamgeEdgeBackend, chamge_edge_backend, CHAMGE_TYPE_NODE_BACKEND)
+                        
 /* *INDENT-ON* */
 
 static void

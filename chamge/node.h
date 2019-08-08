@@ -32,13 +32,14 @@ struct _ChamgeNodeClass
 
   /* callbacks */
   void (* state_changed)                (ChamgeNode *self, ChamgeNodeState state);
-  
-  /* methods */
+
+  /* virtual public methods */
   ChamgeReturn (* enroll)               (ChamgeNode *self, gboolean lazy);
   ChamgeReturn (* delist)               (ChamgeNode *self);
 
   ChamgeReturn (* activate)             (ChamgeNode *self);
   ChamgeReturn (* deactivate)           (ChamgeNode *self);
+
 };
 
 CHAMGE_API_EXPORT

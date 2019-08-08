@@ -22,7 +22,7 @@ G_DECLARE_DERIVABLE_TYPE (ChamgeEdgeBackend, chamge_edge_backend, CHAMGE, EDGE_B
 
 struct _ChamgeEdgeBackendClass
 {
-  ChamgeNodeBackend parent_class;
+  ChamgeNodeBackendClass parent_class;
 
   gchar* (* request_target_uri)         (ChamgeEdgeBackend *self, GError **error);
 };

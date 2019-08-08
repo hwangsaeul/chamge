@@ -9,7 +9,6 @@
 #include "node.h"
 
 #include "enumtypes.h"
-#include "node-backend.h"
 
 #include <glib.h>
 
@@ -17,17 +16,15 @@ typedef struct
 {
   gchar *uid;
   ChamgeNodeState state;
-  ChamgeNodeBackend *backend;
 } ChamgeNodePrivate;
 
 
 typedef enum
 {
   PROP_UID = 1,
-  PROP_BACKEND,
 
   /*< private > */
-  PROP_LAST = PROP_BACKEND
+  PROP_LAST = PROP_UID
 } _ChamgeNodeProperty;
 
 static GParamSpec *properties[PROP_LAST + 1];
@@ -130,7 +127,6 @@ chamge_node_dispose (GObject * object)
   ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
 
   g_clear_pointer (&priv->uid, g_free);
-  g_clear_object (&priv->backend);
 
   G_OBJECT_CLASS (chamge_node_parent_class)->dispose (object);
 }
@@ -164,10 +160,6 @@ chamge_node_set_property (GObject * object,
       g_assert (priv->uid == NULL);     /* construct only */
       priv->uid = g_value_dup_string (value);
       break;
-    case PROP_BACKEND:
-      g_assert (priv->backend == NULL); /* construct only */
-      priv->backend = g_value_dup_object (value);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -185,11 +177,6 @@ chamge_node_class_init (ChamgeNodeClass * klass)
 
   properties[PROP_UID] = g_param_spec_string ("uid", "uid", "uid", NULL,
       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
-
-  properties[PROP_BACKEND] =
-      g_param_spec_object ("backend", "Backend", "Backend",
-      CHAMGE_TYPE_NODE_BACKEND,
-      G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
@@ -210,6 +197,7 @@ static void
 chamge_node_init (ChamgeNode * self)
 {
   ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+
   priv->state = CHAMGE_NODE_STATE_NULL;
 }
 

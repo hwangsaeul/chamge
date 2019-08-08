@@ -10,7 +10,7 @@
 
 struct _ChamgeMockEdgeBackend
 {
-
+  ChamgeEdgeBackend parent;
 };
 
 /* *INDENT-OFF* */
