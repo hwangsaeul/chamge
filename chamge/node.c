@@ -14,17 +14,20 @@
 
 typedef struct
 {
+  GMutex mutex;
+
   gchar *uid;
   ChamgeNodeState state;
-} ChamgeNodePrivate;
 
+} ChamgeNodePrivate;
 
 typedef enum
 {
   PROP_UID = 1,
+  PROP_STATE,
 
   /*< private > */
-  PROP_LAST = PROP_UID
+  PROP_LAST = PROP_STATE
 } _ChamgeNodeProperty;
 
 static GParamSpec *properties[PROP_LAST + 1];
@@ -79,15 +82,31 @@ chamge_node_dispose (GObject * object)
 }
 
 static void
+chamge_node_finalize (GObject * object)
+{
+  ChamgeNode *self = CHAMGE_NODE (object);
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+
+  g_mutex_clear (&priv->mutex);
+
+  G_OBJECT_CLASS (chamge_node_parent_class)->finalize (object);
+}
+
+static void
 chamge_node_get_property (GObject * object,
     guint prop_id, GValue * value, GParamSpec * pspec)
 {
   ChamgeNode *self = CHAMGE_NODE (object);
   ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+  g_autoptr (GMutexLocker) locker = NULL;
 
   switch ((_ChamgeNodeProperty) prop_id) {
     case PROP_UID:
       g_value_set_string (value, priv->uid);
+      break;
+    case PROP_STATE:
+      locker = g_mutex_locker_new (&priv->mutex);
+      g_value_set_enum (value, priv->state);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -121,9 +140,14 @@ chamge_node_class_init (ChamgeNodeClass * klass)
   object_class->get_property = chamge_node_get_property;
   object_class->set_property = chamge_node_set_property;
   object_class->dispose = chamge_node_dispose;
+  object_class->finalize = chamge_node_finalize;
 
   properties[PROP_UID] = g_param_spec_string ("uid", "uid", "uid", NULL,
       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+
+  properties[PROP_STATE] = g_param_spec_enum ("state", "state", "state",
+      CHAMGE_TYPE_NODE_STATE, CHAMGE_NODE_STATE_NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
@@ -145,6 +169,8 @@ chamge_node_init (ChamgeNode * self)
 {
   ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
 
+  g_mutex_init (&priv->mutex);
+
   priv->state = CHAMGE_NODE_STATE_NULL;
 }
 
@@ -153,6 +179,8 @@ chamge_node_enroll (ChamgeNode * self, gboolean lazy)
 {
   ChamgeNodeClass *klass;
   ChamgeReturn ret = CHAMGE_RETURN_OK;
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+  g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
 
@@ -162,6 +190,11 @@ chamge_node_enroll (ChamgeNode * self, gboolean lazy)
   /* Check return value by local variable to make debugger trace stack easy */
   ret = klass->enroll (self, lazy);
 
+  if (ret == CHAMGE_RETURN_OK) {
+    locker = g_mutex_locker_new (&priv->mutex);
+    priv->state = CHAMGE_NODE_STATE_ENROLLED;
+  }
+
   return ret;
 }
 
@@ -170,6 +203,8 @@ chamge_node_delist (ChamgeNode * self)
 {
   ChamgeNodeClass *klass;
   ChamgeReturn ret = CHAMGE_RETURN_OK;
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+  g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
 
@@ -179,6 +214,11 @@ chamge_node_delist (ChamgeNode * self)
   /* Check return value by local variable to make debugger trace stack easy */
   ret = klass->delist (self);
 
+  if (ret == CHAMGE_RETURN_OK) {
+    locker = g_mutex_locker_new (&priv->mutex);
+    priv->state = CHAMGE_NODE_STATE_NULL;
+  }
+
   return ret;
 }
 
@@ -187,6 +227,8 @@ chamge_node_activate (ChamgeNode * self)
 {
   ChamgeNodeClass *klass;
   ChamgeReturn ret = CHAMGE_RETURN_OK;
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+  g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
 
@@ -196,6 +238,11 @@ chamge_node_activate (ChamgeNode * self)
   /* Check return value by local variable to make debugger trace stack easy */
   ret = klass->activate (self);
 
+  if (ret == CHAMGE_RETURN_OK) {
+    locker = g_mutex_locker_new (&priv->mutex);
+    priv->state = CHAMGE_NODE_STATE_ACTIVATED;
+  }
+
   return ret;
 }
 
@@ -204,6 +251,8 @@ chamge_node_deactivate (ChamgeNode * self)
 {
   ChamgeNodeClass *klass;
   ChamgeReturn ret = CHAMGE_RETURN_OK;
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+  g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
 
@@ -212,6 +261,11 @@ chamge_node_deactivate (ChamgeNode * self)
 
   /* Check return value by local variable to make debugger trace stack easy */
   ret = klass->deactivate (self);
+
+  if (ret == CHAMGE_RETURN_OK) {
+    locker = g_mutex_locker_new (&priv->mutex);
+    priv->state = CHAMGE_NODE_STATE_ENROLLED;
+  }
 
   return ret;
 }
