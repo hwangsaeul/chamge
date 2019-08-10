@@ -52,7 +52,6 @@ test_edge_instance (void)
 
   ret = chamge_node_delist (CHAMGE_NODE (edge));
   g_assert (ret == CHAMGE_RETURN_OK);
-
 }
 
 static void
@@ -67,19 +66,32 @@ test_edge_instance_lazy (TestFixture * fixture, gconstpointer unused)
 {
   ChamgeReturn ret;
   g_autoptr (ChamgeEdge) edge = NULL;
+  ChamgeNodeState state;
 
   edge = chamge_edge_new (DEFAULT_EDGE_UID);
 
   g_signal_connect (edge, "state-changed", G_CALLBACK (state_changed_cb),
       fixture);
 
+  g_object_get (edge, "state", &state, NULL);
+  g_assert (state == CHAMGE_NODE_STATE_NULL);
+
   ret = chamge_node_enroll (CHAMGE_NODE (edge), TRUE);
   g_assert (ret == CHAMGE_RETURN_ASYNC);
 
+  g_object_get (edge, "state", &state, NULL);
+  g_assert (state == CHAMGE_NODE_STATE_NULL);
+
   g_main_loop_run (fixture->loop);
+
+  g_object_get (edge, "state", &state, NULL);
+  g_assert (state == CHAMGE_NODE_STATE_ENROLLED);
 
   ret = chamge_node_delist (CHAMGE_NODE (edge));
   g_assert (ret == CHAMGE_RETURN_OK);
+
+  g_object_get (edge, "state", &state, NULL);
+  g_assert (state == CHAMGE_NODE_STATE_NULL);
 }
 
 int
