@@ -34,7 +34,7 @@ struct _ChamgeNodeClass
   void (* state_changed)                (ChamgeNode *self, ChamgeNodeState state);
 
   /* virtual public methods */
-  ChamgeReturn (* enroll)               (ChamgeNode *self, gboolean lazy);
+  ChamgeReturn (* enroll)               (ChamgeNode *self);
   ChamgeReturn (* delist)               (ChamgeNode *self);
 
   ChamgeReturn (* activate)             (ChamgeNode *self);
