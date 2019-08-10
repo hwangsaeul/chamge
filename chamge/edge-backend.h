@@ -13,6 +13,7 @@
 
 #include <glib-object.h>
 #include <chamge/types.h>
+#include <chamge/edge.h>
 #include <chamge/node-backend.h>
 
 G_BEGIN_DECLS
@@ -24,10 +25,23 @@ struct _ChamgeEdgeBackendClass
 {
   ChamgeNodeBackendClass parent_class;
 
-  gchar* (* request_target_uri)         (ChamgeEdgeBackend *self, GError **error);
+  gchar*        (* request_target_uri)          (ChamgeEdgeBackend     *self,
+                                                 GError               **error);
 };
 
-ChamgeEdgeBackend     *chamge_edge_backend_new (void);
+ChamgeEdgeBackend      *chamge_edge_backend_new         (ChamgeEdge            *edge);
+
+ChamgeReturn            chamge_edge_backend_enroll      (ChamgeEdgeBackend     *self);
+
+ChamgeReturn            chamge_edge_backend_delist      (ChamgeEdgeBackend     *self);
+
+ChamgeReturn            chamge_edge_backend_activate    (ChamgeEdgeBackend     *self);
+
+ChamgeReturn            chamge_edge_backend_deactivate  (ChamgeEdgeBackend     *self);
+
+ChamgeReturn            chagme_edge_backend_request_target_uri
+                                                        (ChamgeEdgeBackend     *self,
+                                                         GError               **error);
 
 G_END_DECLS
 

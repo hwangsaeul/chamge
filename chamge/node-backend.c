@@ -11,24 +11,15 @@
 #include "node.h"
 #include "enumtypes.h"
 
-typedef struct
-{
-  ChamgeNode *node;
-} ChamgeNodeBackendPrivate;
-
 /* *INDENT-OFF* */
-G_DEFINE_ABSTRACT_TYPE_WITH_CODE (ChamgeNodeBackend, chamge_node_backend, G_TYPE_OBJECT,
-                                  G_ADD_PRIVATE (ChamgeNodeBackend))
+G_DEFINE_ABSTRACT_TYPE (ChamgeNodeBackend, chamge_node_backend, G_TYPE_OBJECT)
+                                  
 /* *INDENT-ON* */
 
 static void
 chamge_node_backend_dispose (GObject * object)
 {
   ChamgeNodeBackend *self = CHAMGE_NODE_BACKEND (object);
-  ChamgeNodeBackendPrivate *priv =
-      chamge_node_backend_get_instance_private (self);
-
-  g_clear_object (&priv->node);
 
   G_OBJECT_CLASS (chamge_node_backend_parent_class)->dispose (object);
 }
