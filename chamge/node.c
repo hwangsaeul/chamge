@@ -47,9 +47,62 @@ G_DEFINE_ABSTRACT_TYPE_WITH_CODE (ChamgeNode, chamge_node, G_TYPE_OBJECT,
 
 
 static ChamgeReturn
+lazy_enroll (ChamgeNode * self)
+{
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+
+  return ret;
+}
+
+static gboolean
+enroll_by_uid_group_func (gpointer user_data)
+{
+  ChamgeNode *self = CHAMGE_NODE (user_data);
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+
+  ret = lazy_enroll (self);
+
+  if (ret == CHAMGE_RETURN_OK) {
+    g_signal_emit (self, signals[SIG_STATE_CHANGED], 0,
+        CHAMGE_NODE_STATE_ENROLLED);
+  }
+
+  return G_SOURCE_REMOVE;
+}
+
+static ChamgeReturn
 chamge_node_enroll_default (ChamgeNode * self, gboolean lazy)
 {
-  return CHAMGE_RETURN_FAIL;
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+
+  if (lazy) {
+    const gchar *md5_digest;
+    guint group_time_ms, trigger_ms;
+    gint64 rtime_ms;
+    g_autoptr (GChecksum) md5 = NULL;
+
+    md5 = g_checksum_new (G_CHECKSUM_MD5);
+    g_checksum_update (md5, (const guchar *) priv->uid, strlen (priv->uid));
+    md5_digest = g_checksum_get_string (md5);
+
+    /* 16 groups in 100 seconds */
+    group_time_ms =
+        g_ascii_strtoull (md5_digest + strlen (md5_digest) - 1, NULL,
+        16) * 6250;
+
+    rtime_ms = g_get_real_time () / 1000;
+    trigger_ms =
+        rtime_ms % 100000 >
+        group_time_ms ? 100000 + group_time_ms -
+        rtime_ms % 100000 : group_time_ms - rtime_ms % 100000;
+
+    g_timeout_add (trigger_ms, enroll_by_uid_group_func, self);
+
+    ret = CHAMGE_RETURN_ASYNC;
+  }
+
+  return ret;
 }
 
 static ChamgeReturn
