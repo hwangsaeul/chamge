@@ -16,7 +16,7 @@ foreach iface: dbus_ifaces
     iface[1],
     sources: name + '.xml',
     interface_prefix: prefix,
-    namespace: 'ChamgaeDBus',
+    namespace: 'ChamgeDBus',
   )
   dbus_headers = dbus_sources[0]
   sources += dbus_sources[1]
