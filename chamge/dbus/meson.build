@@ -4,13 +4,13 @@ sources = [
 ]
 
 dbus_ifaces = [
-  [ 'MQ1', 'mp1-generated' ]
+  [ 'Manager', 'manager-generated' ]
 ]
 
 dbus_headers = []
 
 foreach iface: dbus_ifaces
-  prefix = 'org.hwangsaeul.chamge.'
+  prefix = 'org.hwangsaeul.Chamge1.'
   name = prefix + iface[0] 
   dbus_sources = gnome.gdbus_codegen(
     iface[1],
