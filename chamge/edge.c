@@ -114,3 +114,21 @@ chamge_edge_new (const gchar * uid)
   g_assert_nonnull (uid);
   return g_object_new (CHAMGE_TYPE_EDGE, "uid", uid, NULL);
 }
+
+gchar *
+chamge_edge_request_target_uri (ChamgeEdge * self, GError ** error)
+{
+  ChamgeEdgeClass *klass;
+  g_autofree gchar *target_uri = NULL;
+  ChamgeEdgePrivate *priv = chamge_edge_get_instance_private (self);
+
+  g_return_val_if_fail (CHAMGE_IS_EDGE (self), NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  klass = CHAMGE_EDGE_GET_CLASS (self);
+  g_return_val_if_fail (klass->request_target_uri != NULL, NULL);
+
+  target_uri = klass->request_target_uri (self, error);
+
+  return g_steal_pointer (&target_uri);
+}
