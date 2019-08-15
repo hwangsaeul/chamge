@@ -106,10 +106,31 @@ test_edge_request_target_uri (TestFixture * fixture, gconstpointer unused)
   ChamgeNodeState state;
   edge = chamge_edge_new (DEFAULT_EDGE_UID);
 
-  g_signal_connect (edge, "state-changed", G_CALLBACK (state_changed_quit_cb),
-      fixture);
   target_uri = chamge_edge_request_target_uri (edge, &error);
+  g_assert_null (target_uri);
 
+  ret = chamge_node_enroll (CHAMGE_NODE (edge), FALSE);
+  g_assert (ret == CHAMGE_RETURN_OK);
+
+  g_object_get (edge, "state", &state, NULL);
+  g_assert (state == CHAMGE_NODE_STATE_ENROLLED);
+
+  ret = chamge_node_activate (CHAMGE_NODE (edge));
+  g_assert (ret == CHAMGE_RETURN_OK);
+
+  target_uri = chamge_edge_request_target_uri (edge, &error);
+  g_assert_nonnull (target_uri);
+
+  ret = chamge_node_deactivate (CHAMGE_NODE (edge));
+  g_assert (ret == CHAMGE_RETURN_OK);
+
+  target_uri = chamge_edge_request_target_uri (edge, &error);
+  g_assert_null (target_uri);
+
+  ret = chamge_node_delist (CHAMGE_NODE (edge));
+  g_assert (ret == CHAMGE_RETURN_OK);
+
+  target_uri = chamge_edge_request_target_uri (edge, &error);
   g_assert_null (target_uri);
 }
 
