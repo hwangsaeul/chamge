@@ -54,6 +54,7 @@ chamge_incs = include_directories('.', 'chamge')
 common_ldflags = [ ]
 
 subdir('chamge')
+subdir('agent')
 subdir('tests')
 
 run_command(python3, '-c', 'import shutil; shutil.copy("hooks/pre-commit.hook", ".git/hooks/pre-commit")')
