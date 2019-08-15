@@ -20,19 +20,21 @@
 typedef struct _TestFixture
 {
   ChamgeEdge *edge;
+  ChamgeNodeState prev_state;
   GMainLoop *loop;
 } TestFixture;
 
 static void
 fixture_setup (TestFixture * fixture, gconstpointer unused)
 {
+  fixture->prev_state = CHAMGE_NODE_STATE_NULL;
   fixture->loop = g_main_loop_new (NULL, FALSE);
 }
 
 static void
 fixture_teardown (TestFixture * fixture, gconstpointer unused)
 {
-  g_main_loop_quit (fixture->loop);
+  g_main_loop_unref (fixture->loop);
 }
 
 static void
@@ -58,7 +60,11 @@ static void
 state_changed_cb (ChamgeEdge * edge, ChamgeNodeState state,
     TestFixture * fixture)
 {
-  g_main_loop_quit (fixture->loop);
+  if (fixture->prev_state == CHAMGE_NODE_STATE_ENROLLED &&
+      state == CHAMGE_NODE_STATE_NULL) {
+    g_main_loop_quit (fixture->loop);
+  }
+  fixture->prev_state = state;
 }
 
 static void
@@ -94,6 +100,22 @@ test_edge_instance_lazy (TestFixture * fixture, gconstpointer unused)
   g_assert (state == CHAMGE_NODE_STATE_NULL);
 }
 
+
+static void
+test_edge_request_target_uri (TestFixture * fixture, gconstpointer unused)
+{
+  ChamgeReturn ret;
+  g_autoptr (ChamgeEdge) edge = NULL;
+  g_autoptr (GError) error = NULL;
+  g_autofree gchar *target_uri = NULL;
+  ChamgeNodeState state;
+  edge = chamge_edge_new (DEFAULT_EDGE_UID);
+  g_signal_connect (edge, "state-changed", G_CALLBACK (state_changed_cb),
+      fixture);
+  target_uri = chamge_edge_request_target_uri (edge, &error);
+  g_assert_null (target_uri);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -101,6 +123,5 @@ main (int argc, char *argv[])
   g_test_add_func ("/chamge/edge-instance", test_edge_instance);
   g_test_add ("/chamge/edge-instance-lazy", TestFixture, NULL,
       fixture_setup, test_edge_instance_lazy, fixture_teardown);
-
   return g_test_run ();
 }

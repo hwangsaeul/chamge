@@ -12,6 +12,7 @@
 #define __CHAMGE_INSIDE__
 
 #include <chamge/types.h>
+#include <chamge/enumtypes.h>
 #include <chamge/node.h>
 #include <chamge/edge.h>
 
