@@ -15,7 +15,8 @@
  * md5 ("abc-987-123") == defaa0a0d935c7b52c459159788a8b7c
  * time group: c
  */
-#define DEFAULT_EDGE_UID "abc-987-123"
+#define DEFAULT_EDGE_UID        "abc-987-123"
+#define DEFAULT_BACKEND         CHAMGE_BACKEND_MOCK
 
 typedef struct _TestFixture
 {
@@ -44,7 +45,7 @@ test_edge_instance (void)
   gchar *uid = NULL;
   g_autoptr (ChamgeEdge) edge = NULL;
 
-  edge = chamge_edge_new (DEFAULT_EDGE_UID);
+  edge = chamge_edge_new (DEFAULT_EDGE_UID, DEFAULT_BACKEND);
 
   g_object_get (edge, "uid", &uid, NULL);
   g_assert_cmpstr (uid, ==, DEFAULT_EDGE_UID);
@@ -70,7 +71,7 @@ test_edge_instance_lazy (TestFixture * fixture, gconstpointer unused)
   g_autoptr (ChamgeEdge) edge = NULL;
   ChamgeNodeState state;
 
-  edge = chamge_edge_new (DEFAULT_EDGE_UID);
+  edge = chamge_edge_new (DEFAULT_EDGE_UID, DEFAULT_BACKEND);
 
   g_signal_connect (edge, "state-changed", G_CALLBACK (state_changed_quit_cb),
       fixture);
@@ -104,7 +105,7 @@ test_edge_request_target_uri (TestFixture * fixture, gconstpointer unused)
   g_autoptr (GError) error = NULL;
   g_autofree gchar *target_uri = NULL;
   ChamgeNodeState state;
-  edge = chamge_edge_new (DEFAULT_EDGE_UID);
+  edge = chamge_edge_new (DEFAULT_EDGE_UID, DEFAULT_BACKEND);
 
   target_uri = chamge_edge_request_target_uri (edge, &error);
   g_assert_null (target_uri);

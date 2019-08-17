@@ -23,4 +23,11 @@ typedef enum {
   CHAMGE_RETURN_ASYNC,
 } ChamgeReturn;
 
+typedef enum {
+  CHAMGE_BACKEND_UNKNOWN = 0,
+  CHAMGE_BACKEND_MOCK,
+  CHAMGE_BACKEND_AMQP,
+} ChamgeBackend;
+
+
 #endif // __CHAMGE_TYPES_H__

@@ -106,7 +106,19 @@ chamge_edge_backend_init (ChamgeEdgeBackend * self)
 ChamgeEdgeBackend *
 chamge_edge_backend_new (ChamgeEdge * edge)
 {
-  return g_object_new (CHAMGE_TYPE_MOCK_EDGE_BACKEND, "edge", edge, NULL);
+  ChamgeBackend backend;
+  g_autoptr (ChamgeEdgeBackend) edge_backend = NULL;
+
+  g_return_val_if_fail (CHAMGE_IS_EDGE (edge), NULL);
+
+  g_object_get (edge, "backend", &backend, NULL);
+
+  if (backend == CHAMGE_BACKEND_MOCK) {
+    edge_backend =
+        g_object_new (CHAMGE_TYPE_MOCK_EDGE_BACKEND, "edge", edge, NULL);
+  }
+
+  return g_steal_pointer (&edge_backend);
 }
 
 ChamgeReturn
