@@ -14,7 +14,6 @@
 #include <glib-object.h>
 #include <chamge/types.h>
 #include <chamge/edge.h>
-#include <chamge/node-backend.h>
 
 G_BEGIN_DECLS
 
@@ -23,13 +22,13 @@ G_DECLARE_DERIVABLE_TYPE (ChamgeEdgeBackend, chamge_edge_backend, CHAMGE, EDGE_B
 
 struct _ChamgeEdgeBackendClass
 {
-  ChamgeNodeBackendClass parent_class;
+  GObjectClass  parent_class;
 
-  ChamgeReturn (* enroll)                       (ChamgeEdgeBackend     *self);
-  ChamgeReturn (* delist)                       (ChamgeEdgeBackend     *self);
+  ChamgeReturn  (* enroll)                      (ChamgeEdgeBackend     *self);
+  ChamgeReturn  (* delist)                      (ChamgeEdgeBackend     *self);
 
-  ChamgeReturn (* activate)                     (ChamgeEdgeBackend     *self);
-  ChamgeReturn (* deactivate)                   (ChamgeEdgeBackend     *self);
+  ChamgeReturn  (* activate)                    (ChamgeEdgeBackend     *self);
+  ChamgeReturn  (* deactivate)                  (ChamgeEdgeBackend     *self);
 
   gchar*        (* request_target_uri)          (ChamgeEdgeBackend     *self,
                                                  GError               **error);
