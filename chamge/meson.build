@@ -6,14 +6,12 @@ source_h = [
   'types.h',
   'node.h',
   'edge.h',
-  'node-backend.h',
   'edge-backend.h'
 ]
 
 source_c = [
   'node.c',
   'edge.c',
-  'node-backend.c',
   'edge-backend.c',
   'mock-edge-backend.c',
 ]

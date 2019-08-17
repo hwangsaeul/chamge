@@ -24,7 +24,12 @@ G_DEFINE_TYPE_WITH_CODE (ChamgeEdge, chamge_edge, CHAMGE_TYPE_NODE,
 static gchar *
 chamge_edge_request_target_uri_default (ChamgeEdge * self, GError ** error)
 {
-  return NULL;
+  g_autofree gchar *target_uri = NULL;
+  ChamgeEdgePrivate *priv = chamge_edge_get_instance_private (self);
+
+  target_uri = chamge_edge_backend_request_target_uri (priv->backend, error);
+
+  return g_steal_pointer (&target_uri);
 }
 
 static ChamgeReturn
@@ -119,6 +124,7 @@ gchar *
 chamge_edge_request_target_uri (ChamgeEdge * self, GError ** error)
 {
   ChamgeEdgeClass *klass;
+  ChamgeNodeState state;
   g_autofree gchar *target_uri = NULL;
   ChamgeEdgePrivate *priv = chamge_edge_get_instance_private (self);
 
@@ -128,7 +134,11 @@ chamge_edge_request_target_uri (ChamgeEdge * self, GError ** error)
   klass = CHAMGE_EDGE_GET_CLASS (self);
   g_return_val_if_fail (klass->request_target_uri != NULL, NULL);
 
-  target_uri = klass->request_target_uri (self, error);
+  g_object_get (self, "state", &state, NULL);
+
+  if (state == CHAMGE_NODE_STATE_ACTIVATED) {
+    target_uri = klass->request_target_uri (self, error);
+  }
 
   return g_steal_pointer (&target_uri);
 }

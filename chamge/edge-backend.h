@@ -19,11 +19,17 @@
 G_BEGIN_DECLS
 
 #define CHAMGE_TYPE_EDGE_BACKEND       (chamge_edge_backend_get_type ())
-G_DECLARE_DERIVABLE_TYPE (ChamgeEdgeBackend, chamge_edge_backend, CHAMGE, EDGE_BACKEND, ChamgeNodeBackend)
+G_DECLARE_DERIVABLE_TYPE (ChamgeEdgeBackend, chamge_edge_backend, CHAMGE, EDGE_BACKEND, GObject)
 
 struct _ChamgeEdgeBackendClass
 {
   ChamgeNodeBackendClass parent_class;
+
+  ChamgeReturn (* enroll)                       (ChamgeEdgeBackend     *self);
+  ChamgeReturn (* delist)                       (ChamgeEdgeBackend     *self);
+
+  ChamgeReturn (* activate)                     (ChamgeEdgeBackend     *self);
+  ChamgeReturn (* deactivate)                   (ChamgeEdgeBackend     *self);
 
   gchar*        (* request_target_uri)          (ChamgeEdgeBackend     *self,
                                                  GError               **error);
@@ -39,7 +45,7 @@ ChamgeReturn            chamge_edge_backend_activate    (ChamgeEdgeBackend     *
 
 ChamgeReturn            chamge_edge_backend_deactivate  (ChamgeEdgeBackend     *self);
 
-ChamgeReturn            chagme_edge_backend_request_target_uri
+gchar                  *chamge_edge_backend_request_target_uri
                                                         (ChamgeEdgeBackend     *self,
                                                          GError               **error);
 

@@ -30,7 +30,7 @@ typedef enum
 static GParamSpec *properties[PROP_LAST + 1];
 
 /* *INDENT-OFF* */
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (ChamgeEdgeBackend, chamge_edge_backend, CHAMGE_TYPE_NODE_BACKEND)
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (ChamgeEdgeBackend, chamge_edge_backend, G_TYPE_OBJECT)
 /* *INDENT-ON* */
 
 static void
@@ -112,29 +112,74 @@ chamge_edge_backend_new (ChamgeEdge * edge)
 ChamgeReturn
 chamge_edge_backend_enroll (ChamgeEdgeBackend * self)
 {
-  return CHAMGE_RETURN_OK;
+  ChamgeEdgeBackendClass *klass;
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+  g_return_val_if_fail (CHAMGE_IS_EDGE_BACKEND (self), CHAMGE_RETURN_FAIL);
+
+  klass = CHAMGE_EDGE_BACKEND_GET_CLASS (self);
+  g_return_val_if_fail (klass->enroll != NULL, CHAMGE_RETURN_FAIL);
+
+  ret = klass->enroll (self);
+
+  return ret;
 }
 
 ChamgeReturn
 chamge_edge_backend_delist (ChamgeEdgeBackend * self)
 {
-  return CHAMGE_RETURN_OK;
+  ChamgeEdgeBackendClass *klass;
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+  g_return_val_if_fail (CHAMGE_IS_EDGE_BACKEND (self), CHAMGE_RETURN_FAIL);
+
+  klass = CHAMGE_EDGE_BACKEND_GET_CLASS (self);
+  g_return_val_if_fail (klass->delist != NULL, CHAMGE_RETURN_FAIL);
+
+  ret = klass->delist (self);
+
+  return ret;
 }
 
 ChamgeReturn
 chamge_edge_backend_activate (ChamgeEdgeBackend * self)
 {
-  return CHAMGE_RETURN_OK;
+  ChamgeEdgeBackendClass *klass;
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+  g_return_val_if_fail (CHAMGE_IS_EDGE_BACKEND (self), CHAMGE_RETURN_FAIL);
+
+  klass = CHAMGE_EDGE_BACKEND_GET_CLASS (self);
+  g_return_val_if_fail (klass->activate != NULL, CHAMGE_RETURN_FAIL);
+
+  ret = klass->activate (self);
+
+  return ret;
 }
 
 ChamgeReturn
 chamge_edge_backend_deactivate (ChamgeEdgeBackend * self)
 {
-  return CHAMGE_RETURN_OK;
+  ChamgeEdgeBackendClass *klass;
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+  g_return_val_if_fail (CHAMGE_IS_EDGE_BACKEND (self), CHAMGE_RETURN_FAIL);
+
+  klass = CHAMGE_EDGE_BACKEND_GET_CLASS (self);
+  g_return_val_if_fail (klass->deactivate != NULL, CHAMGE_RETURN_FAIL);
+
+  ret = klass->deactivate (self);
+
+  return ret;
 }
 
-ChamgeReturn chagme_edge_backend_request_target_uri
+gchar *chamge_edge_backend_request_target_uri
     (ChamgeEdgeBackend * self, GError ** error)
 {
-  return CHAMGE_RETURN_OK;
+  g_autofree gchar *target_uri = NULL;
+  ChamgeEdgeBackendClass *klass;
+  g_return_val_if_fail (CHAMGE_IS_EDGE_BACKEND (self), NULL);
+
+  klass = CHAMGE_EDGE_BACKEND_GET_CLASS (self);
+  g_return_val_if_fail (klass->request_target_uri != NULL, NULL);
+
+  target_uri = klass->request_target_uri (self, error);
+
+  return g_steal_pointer (&target_uri);
 }
