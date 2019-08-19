@@ -89,10 +89,81 @@ chamge_agent_class_init (ChamgeAgentClass * klass)
   app_class->dbus_unregister = chamge_agent_dbus_unregister;
 }
 
+static gboolean
+chamge_agent_handle_enroll (ChamgeDBusManager * manager,
+    GDBusMethodInvocation * invocation, gpointer user_data)
+{
+  ChamgeAgent *self = CHAMGE_AGENT (user_data);
+
+  chamge_dbus_manager_complete_enroll (manager, invocation);
+
+  return TRUE;
+}
+
+static gboolean
+chamge_agent_handle_delist (ChamgeDBusManager * manager,
+    GDBusMethodInvocation * invocation, gpointer user_data)
+{
+  ChamgeAgent *self = CHAMGE_AGENT (user_data);
+
+  chamge_dbus_manager_complete_delist (manager, invocation);
+
+  return TRUE;
+}
+
+static gboolean
+chamge_agent_handle_activate (ChamgeDBusManager * manager,
+    GDBusMethodInvocation * invocation, gpointer user_data)
+{
+  ChamgeAgent *self = CHAMGE_AGENT (user_data);
+
+  chamge_dbus_manager_complete_activate (manager, invocation);
+
+  return TRUE;
+}
+
+static gboolean
+chamge_agent_handle_deactivate (ChamgeDBusManager * manager,
+    GDBusMethodInvocation * invocation, gpointer user_data)
+{
+  ChamgeAgent *self = CHAMGE_AGENT (user_data);
+
+  chamge_dbus_manager_complete_deactivate (manager, invocation);
+
+  return TRUE;
+}
+
+static gboolean
+chamge_agent_handle_request_srtconnection_uri (ChamgeDBusManager * manager,
+    GDBusMethodInvocation * invocation, gpointer user_data)
+{
+  ChamgeAgent *self = CHAMGE_AGENT (user_data);
+
+  chamge_dbus_manager_complete_request_srtconnection_uri (manager, invocation,
+      NULL);
+
+  return TRUE;
+}
+
 static void
 chamge_agent_init (ChamgeAgent * self)
 {
   self->dbus_manager = chamge_dbus_manager_skeleton_new ();
+
+  g_signal_connect (self->dbus_manager, "handle-enroll",
+      G_CALLBACK (chamge_agent_handle_enroll), self);
+
+  g_signal_connect (self->dbus_manager, "handle-delist",
+      G_CALLBACK (chamge_agent_handle_delist), self);
+
+  g_signal_connect (self->dbus_manager, "handle-activate",
+      G_CALLBACK (chamge_agent_handle_activate), self);
+
+  g_signal_connect (self->dbus_manager, "handle-deactivate",
+      G_CALLBACK (chamge_agent_handle_deactivate), self);
+
+  g_signal_connect (self->dbus_manager, "handle-request-srtconnection-uri",
+      G_CALLBACK (chamge_agent_handle_request_srtconnection_uri), self);
 }
 
 int
