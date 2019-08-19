@@ -166,14 +166,42 @@ chamge_agent_init (ChamgeAgent * self)
       G_CALLBACK (chamge_agent_handle_request_srtconnection_uri), self);
 }
 
+static gint
+handle_local_options (GApplication * app, GVariantDict * options,
+    gpointer user_data)
+{
+  gboolean b;
+
+  if (g_variant_dict_lookup (options, "version", "b", &b)) {
+    g_print ("version %s\n", VERSION);
+    return EXIT_SUCCESS;
+  }
+
+
+  return -1;                    /* continue to prcess */
+}
+
 int
 main (int argc, char *argv[])
 {
   g_autoptr (GApplication) app = NULL;
+  GOptionEntry entries[] = {
+    {"version", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, NULL,
+        "Show the application version", NULL},
+    {NULL}
+  };
 
   app = G_APPLICATION (g_object_new (CHAMGE_TYPE_AGENT,
           "application-id", "org.hwangsaeul.Chamge1",
-          "flags", G_APPLICATION_IS_SERVICE, NULL));
+          "flags",
+          G_APPLICATION_IS_SERVICE | G_APPLICATION_HANDLES_COMMAND_LINE, NULL));
+
+  g_application_add_main_option_entries (app, entries);
+
+  g_signal_connect (app, "handle-local-options",
+      G_CALLBACK (handle_local_options), NULL);
+
+  g_application_set_inactivity_timeout (app, 10000);
 
   return g_application_run (app, argc, argv);
 }
