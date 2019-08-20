@@ -12,7 +12,7 @@
 struct _ChamgeEdgeAgent
 {
   GApplication parent;
-  ChamgeDBusManager *dbus_manager;
+  ChamgeDBusManager *edge_manager;
 };
 
 /* *INDENT-OFF* */
@@ -41,7 +41,7 @@ chamge_edge_agent_dbus_register (GApplication * app,
 
   if (ret &&
       !g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON
-          (self->dbus_manager), connection, "/org/hwangsaeul/Chamge1/Manager",
+          (self->edge_manager), connection, "/org/hwangsaeul/Chamge1/Manager",
           error)) {
     g_warning ("Failed to export Chamge1 D-Bus interface (reason: %s)",
         (*error)->message);
@@ -56,9 +56,9 @@ chamge_edge_agent_dbus_unregister (GApplication * app,
 {
   ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (app);
 
-  if (self->dbus_manager)
+  if (self->edge_manager)
     g_dbus_interface_skeleton_unexport (G_DBUS_INTERFACE_SKELETON
-        (self->dbus_manager));
+        (self->edge_manager));
 
   g_application_release (app);
 
@@ -72,7 +72,7 @@ chamge_edge_agent_dispose (GObject * object)
 {
   ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (object);
 
-  g_clear_object (&self->dbus_manager);
+  g_clear_object (&self->edge_manager);
 
   G_OBJECT_CLASS (chamge_edge_agent_parent_class)->dispose (object);
 }
@@ -149,21 +149,21 @@ chamge_edge_agent_handle_request_srtconnection_uri (ChamgeDBusManager * manager,
 static void
 chamge_edge_agent_init (ChamgeEdgeAgent * self)
 {
-  self->dbus_manager = chamge_dbus_manager_skeleton_new ();
+  self->edge_manager = chamge_dbus_manager_skeleton_new ();
 
-  g_signal_connect (self->dbus_manager, "handle-enroll",
+  g_signal_connect (self->edge_manager, "handle-enroll",
       G_CALLBACK (chamge_edge_agent_handle_enroll), self);
 
-  g_signal_connect (self->dbus_manager, "handle-delist",
+  g_signal_connect (self->edge_manager, "handle-delist",
       G_CALLBACK (chamge_edge_agent_handle_delist), self);
 
-  g_signal_connect (self->dbus_manager, "handle-activate",
+  g_signal_connect (self->edge_manager, "handle-activate",
       G_CALLBACK (chamge_edge_agent_handle_activate), self);
 
-  g_signal_connect (self->dbus_manager, "handle-deactivate",
+  g_signal_connect (self->edge_manager, "handle-deactivate",
       G_CALLBACK (chamge_edge_agent_handle_deactivate), self);
 
-  g_signal_connect (self->dbus_manager, "handle-request-srtconnection-uri",
+  g_signal_connect (self->edge_manager, "handle-request-srtconnection-uri",
       G_CALLBACK (chamge_edge_agent_handle_request_srtconnection_uri), self);
 }
 
