@@ -14,6 +14,7 @@ source_c = [
   'edge.c',
   'edge-backend.c',
   'mock-edge-backend.c',
+  'amqp-edge-backend.c',
 ]
 
 install_headers(source_h, subdir: chamge_install_header_subdir)
@@ -49,7 +50,7 @@ libchamge = library(
 
 libchamge_dep = declare_dependency(link_with: libchamge,
   include_directories: [ chamge_incs ],
-  dependencies: [ gobject_dep ],
+  dependencies: [ gobject_dep, rabbitmq_dep ],
   sources: [ chamge_enums_h ],
 )
 
