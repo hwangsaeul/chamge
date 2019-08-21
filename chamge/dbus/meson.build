@@ -4,7 +4,7 @@ sources = [
 ]
 
 dbus_ifaces = [
-  [ 'Manager', 'manager-generated' ]
+  [ 'Edge.Manager', 'edge-manager-generated' ]
 ]
 
 dbus_headers = []

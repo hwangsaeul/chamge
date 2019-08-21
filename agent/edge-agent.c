@@ -7,12 +7,13 @@
 #include "config.h"
 
 #include "edge-agent.h"
-#include "chamge/dbus/manager-generated.h"
+#include <chamge/edge.h>
+#include <chamge/dbus/edge-manager-generated.h>
 
 struct _ChamgeEdgeAgent
 {
   GApplication parent;
-  ChamgeDBusManager *edge_manager;
+  ChamgeDBusEdgeManager *edge_manager;
 };
 
 /* *INDENT-OFF* */
@@ -41,8 +42,8 @@ chamge_edge_agent_dbus_register (GApplication * app,
 
   if (ret &&
       !g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON
-          (self->edge_manager), connection, "/org/hwangsaeul/Chamge1/Manager",
-          error)) {
+          (self->edge_manager), connection,
+          "/org/hwangsaeul/Chamge1/Edge/Manager", error)) {
     g_warning ("Failed to export Chamge1 D-Bus interface (reason: %s)",
         (*error)->message);
   }
@@ -91,57 +92,57 @@ chamge_edge_agent_class_init (ChamgeEdgeAgentClass * klass)
 }
 
 static gboolean
-chamge_edge_agent_handle_enroll (ChamgeDBusManager * manager,
+chamge_edge_agent_handle_enroll (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
   ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
 
-  chamge_dbus_manager_complete_enroll (manager, invocation);
+  chamge_dbus_edge_manager_complete_enroll (manager, invocation);
 
   return TRUE;
 }
 
 static gboolean
-chamge_edge_agent_handle_delist (ChamgeDBusManager * manager,
+chamge_edge_agent_handle_delist (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
   ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
 
-  chamge_dbus_manager_complete_delist (manager, invocation);
+  chamge_dbus_edge_manager_complete_delist (manager, invocation);
 
   return TRUE;
 }
 
 static gboolean
-chamge_edge_agent_handle_activate (ChamgeDBusManager * manager,
+chamge_edge_agent_handle_activate (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
   ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
 
-  chamge_dbus_manager_complete_activate (manager, invocation);
+  chamge_dbus_edge_manager_complete_activate (manager, invocation);
 
   return TRUE;
 }
 
 static gboolean
-chamge_edge_agent_handle_deactivate (ChamgeDBusManager * manager,
+chamge_edge_agent_handle_deactivate (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
   ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
 
-  chamge_dbus_manager_complete_deactivate (manager, invocation);
+  chamge_dbus_edge_manager_complete_deactivate (manager, invocation);
 
   return TRUE;
 }
 
 static gboolean
-chamge_edge_agent_handle_request_srtconnection_uri (ChamgeDBusManager * manager,
-    GDBusMethodInvocation * invocation, gpointer user_data)
+chamge_edge_agent_handle_request_srtconnection_uri (ChamgeDBusEdgeManager *
+    manager, GDBusMethodInvocation * invocation, gpointer user_data)
 {
   ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
 
-  chamge_dbus_manager_complete_request_srtconnection_uri (manager, invocation,
-      NULL);
+  chamge_dbus_edge_manager_complete_request_srtconnection_uri (manager,
+      invocation, NULL);
 
   return TRUE;
 }
@@ -149,7 +150,7 @@ chamge_edge_agent_handle_request_srtconnection_uri (ChamgeDBusManager * manager,
 static void
 chamge_edge_agent_init (ChamgeEdgeAgent * self)
 {
-  self->edge_manager = chamge_dbus_manager_skeleton_new ();
+  self->edge_manager = chamge_dbus_edge_manager_skeleton_new ();
 
   g_signal_connect (self->edge_manager, "handle-enroll",
       G_CALLBACK (chamge_edge_agent_handle_enroll), self);
