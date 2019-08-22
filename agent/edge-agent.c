@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include "edge-agent.h"
+#include <chamge/enumtypes.h>
 #include <chamge/edge.h>
 #include <chamge/dbus/edge-manager-generated.h>
 
@@ -14,7 +15,19 @@ struct _ChamgeEdgeAgent
 {
   GApplication parent;
   ChamgeDBusEdgeManager *edge_manager;
+  ChamgeBackend backend;
 };
+
+typedef enum
+{
+  PROP_HOST = 1,
+  PROP_BACKEND,
+
+  /*< private > */
+  PROP_LAST = PROP_BACKEND
+} _ChamgeEdgeAgentProperty;
+
+static GParamSpec *properties[PROP_LAST + 1];
 
 /* *INDENT-OFF* */
 G_DEFINE_TYPE (ChamgeEdgeAgent, chamge_edge_agent, G_TYPE_APPLICATION)
@@ -79,12 +92,58 @@ chamge_edge_agent_dispose (GObject * object)
 }
 
 static void
+chamge_edge_agent_get_property (GObject * object,
+    guint prop_id, GValue * value, GParamSpec * pspec)
+{
+  ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (object);
+
+  switch ((_ChamgeEdgeAgentProperty) prop_id) {
+    case PROP_HOST:
+    case PROP_BACKEND:
+      g_value_set_enum (value, self->backend);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+chamge_edge_agent_set_property (GObject * object,
+    guint prop_id, const GValue * value, GParamSpec * pspec)
+{
+  ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (object);
+
+  switch ((_ChamgeEdgeAgentProperty) prop_id) {
+    case PROP_HOST:
+      break;
+    case PROP_BACKEND:
+      self->backend = g_value_get_enum (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
 chamge_edge_agent_class_init (ChamgeEdgeAgentClass * klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GApplicationClass *app_class = G_APPLICATION_CLASS (klass);
 
+  object_class->get_property = chamge_edge_agent_get_property;
+  object_class->set_property = chamge_edge_agent_set_property;
   object_class->dispose = chamge_edge_agent_dispose;
+
+  properties[PROP_HOST] = g_param_spec_string ("host", "host", "host",
+      NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  properties[PROP_BACKEND] = g_param_spec_enum ("backend", "backend", "backend",
+      CHAMGE_TYPE_BACKEND, CHAMGE_BACKEND_UNKNOWN,
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+  g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
+      properties);
 
   app_class->activate = chamge_edge_agent_activate;
   app_class->dbus_register = chamge_edge_agent_dbus_register;
@@ -173,12 +232,29 @@ handle_local_options (GApplication * app, GVariantDict * options,
     gpointer user_data)
 {
   gboolean b;
+  const gchar *host;
+  const gchar *backend;
 
   if (g_variant_dict_lookup (options, "version", "b", &b)) {
     g_print ("version %s\n", VERSION);
     return EXIT_SUCCESS;
   }
 
+  if (g_variant_dict_lookup (options, "host", "s", &host)) {
+    g_object_set (G_OBJECT (app), "host", host, NULL);
+  }
+
+  if (g_variant_dict_lookup (options, "backend", "s", &backend)) {
+    g_autoptr (GEnumClass) c = g_type_class_ref (CHAMGE_TYPE_BACKEND);
+    GEnumValue *v = g_enum_get_value_by_nick (c, backend);
+
+    if (v == NULL) {
+      /* TODO: print usage? */
+      return EXIT_SUCCESS;
+    }
+
+    g_object_set (G_OBJECT (app), "backend", v->value, NULL);
+  }
 
   return -1;                    /* continue to prcess */
 }
@@ -190,6 +266,10 @@ main (int argc, char *argv[])
   GOptionEntry entries[] = {
     {"version", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, NULL,
         "Show the application version", NULL},
+    {"host", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, NULL,
+        "Set the arbiter host", NULL},
+    {"backend", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, NULL,
+        "Set the backend type {amqp,mock}", NULL},
     {NULL}
   };
 
