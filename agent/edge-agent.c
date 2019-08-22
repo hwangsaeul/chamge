@@ -7,6 +7,9 @@
 #include "config.h"
 
 #include "edge-agent.h"
+
+#include <glib.h>
+
 #include <chamge/enumtypes.h>
 #include <chamge/edge.h>
 #include <chamge/dbus/edge-manager-generated.h>
@@ -245,15 +248,17 @@ handle_local_options (GApplication * app, GVariantDict * options,
   }
 
   if (g_variant_dict_lookup (options, "backend", "s", &backend)) {
-    g_autoptr (GEnumClass) c = g_type_class_ref (CHAMGE_TYPE_BACKEND);
+    GEnumClass *c = g_type_class_ref (CHAMGE_TYPE_BACKEND);
     GEnumValue *v = g_enum_get_value_by_nick (c, backend);
 
     if (v == NULL) {
       /* TODO: print usage? */
+      g_type_class_unref (c);
       return EXIT_SUCCESS;
     }
 
     g_object_set (G_OBJECT (app), "backend", v->value, NULL);
+    g_type_class_unref (c);
   }
 
   return -1;                    /* continue to prcess */
