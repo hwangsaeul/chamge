@@ -17,7 +17,7 @@ G_BEGIN_DECLS
 
 #define CHAMGE_TYPE_EDGE       (chamge_edge_get_type ())
 CHAMGE_API_EXPORT
-G_DECLARE_DERIVABLE_TYPE (ChamgeEdge, chamge_edge, CHAMGE, EDGE, GObject)
+G_DECLARE_DERIVABLE_TYPE (ChamgeEdge, chamge_edge, CHAMGE, EDGE, ChamgeNode)
 
 struct _ChamgeEdgeClass
 {
