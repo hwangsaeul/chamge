@@ -28,7 +28,10 @@ struct _ChamgeEdgeClass
 };
 
 CHAMGE_API_EXPORT
-ChamgeEdge*    chamge_edge_new                          (const gchar   *uid,
+ChamgeEdge*    chamge_edge_new                          (const gchar   *uid);
+
+CHAMGE_API_EXPORT
+ChamgeEdge*    chamge_edge_new_full                     (const gchar   *uid,
                                                          ChamgeBackend  backend);
 
 CHAMGE_API_EXPORT

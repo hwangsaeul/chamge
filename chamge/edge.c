@@ -176,7 +176,13 @@ chamge_edge_init (ChamgeEdge * self)
 }
 
 ChamgeEdge *
-chamge_edge_new (const gchar * uid, ChamgeBackend backend)
+chamge_edge_new (const gchar * uid)
+{
+  return chamge_edge_new_full (uid, CHAMGE_BACKEND_AMQP);
+}
+
+ChamgeEdge *
+chamge_edge_new_full (const gchar * uid, ChamgeBackend backend)
 {
   g_assert_nonnull (uid);
   return g_object_new (CHAMGE_TYPE_EDGE, "uid", uid, "backend", backend, NULL);
