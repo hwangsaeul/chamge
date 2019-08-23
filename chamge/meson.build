@@ -5,12 +5,17 @@ configure_file(output: 'config.h', configuration: cdata)
 source_h = [
   'types.h',
   'node.h',
+  'arbiter.h',
+  'arbiter-backend.h',
   'edge.h',
-  'edge-backend.h'
+  'edge-backend.h',
 ]
 
 source_c = [
   'node.c',
+  'arbiter.c',
+  'arbiter-backend.c',
+  'mock-arbiter-backend.c',
   'edge.c',
   'edge-backend.c',
   'mock-edge-backend.c',
