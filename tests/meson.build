@@ -1,5 +1,6 @@
 tests = [
   'test-edge',
+  'test-arbiter',
 ]
 
 foreach t: tests

@@ -15,6 +15,7 @@
 #include <chamge/enumtypes.h>
 #include <chamge/node.h>
 #include <chamge/edge.h>
+#include <chamge/arbiter.h>
 
 #undef __CHAMGE_INSIDE__
 
