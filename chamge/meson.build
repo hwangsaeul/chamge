@@ -16,6 +16,7 @@ source_c = [
   'arbiter.c',
   'arbiter-backend.c',
   'mock-arbiter-backend.c',
+  'amqp-arbiter-backend.c',
   'edge.c',
   'edge-backend.c',
   'mock-edge-backend.c',

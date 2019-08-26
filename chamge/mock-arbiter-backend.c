@@ -51,7 +51,6 @@ chamge_mock_arbiter_backend_class_init (ChamgeMockArbiterBackendClass * klass)
   backend_class->delist = chamge_mock_arbiter_backend_delist;
   backend_class->activate = chamge_mock_arbiter_backend_activate;
   backend_class->deactivate = chamge_mock_arbiter_backend_deactivate;
-
 }
 
 static void

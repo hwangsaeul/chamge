@@ -12,6 +12,7 @@
 #include "enumtypes.h"
 
 #include "mock-arbiter-backend.h"
+#include "amqp-arbiter-backend.h"
 
 typedef struct
 {
@@ -113,14 +114,11 @@ chamge_arbiter_backend_new (ChamgeArbiter * arbiter)
 
   g_object_get (arbiter, "backend", &backend, NULL);
 
-  backend_type = CHAMGE_TYPE_MOCK_ARBITER_BACKEND;
-/*
   if (backend == CHAMGE_BACKEND_AMQP) {
     backend_type = CHAMGE_TYPE_AMQP_ARBITER_BACKEND;
   } else {
     backend_type = CHAMGE_TYPE_MOCK_ARBITER_BACKEND;
   }
-*/
 
   arbiter_backend = g_object_new (backend_type, "arbiter", arbiter, NULL);
   return g_steal_pointer (&arbiter_backend);
