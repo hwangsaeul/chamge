@@ -17,6 +17,10 @@
 typedef struct
 {
   ChamgeArbiter *arbiter;
+
+  GClosure *edge_enrolled;
+  GClosure *edge_delisted;
+  GClosure *edge_connection_requested;
 } ChamgeArbiterBackendPrivate;
 
 typedef enum
@@ -70,6 +74,18 @@ chamge_arbiter_backend_set_property (GObject * object,
 }
 
 static void
+chamge_arbiter_backend_edge_enrolled (ChamgeArbiterBackend * self,
+    const gchar * edge_id)
+{
+  ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+
+  g_return_if_fail (klass->approve != NULL);
+
+  /* TODO: fire event to application */
+  klass->approve (self, edge_id);
+}
+
+static void
 chamge_arbiter_backend_dispose (GObject * object)
 {
   ChamgeArbiterBackend *self = CHAMGE_ARBITER_BACKEND (object);
@@ -77,6 +93,10 @@ chamge_arbiter_backend_dispose (GObject * object)
       chamge_arbiter_backend_get_instance_private (self);
 
   g_clear_object (&priv->arbiter);
+
+  g_clear_pointer (&priv->edge_enrolled, g_closure_unref);
+  g_clear_pointer (&priv->edge_delisted, g_closure_unref);
+  g_clear_pointer (&priv->edge_connection_requested, g_closure_unref);
 
   G_OBJECT_CLASS (chamge_arbiter_backend_parent_class)->dispose (object);
 }
@@ -96,6 +116,8 @@ chamge_arbiter_backend_class_init (ChamgeArbiterBackendClass * klass)
 
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
+
+  klass->edge_enrolled = chamge_arbiter_backend_edge_enrolled;
 }
 
 static void
@@ -182,4 +204,48 @@ chamge_arbiter_backend_deactivate (ChamgeArbiterBackend * self)
   ret = klass->deactivate (self);
 
   return ret;
+}
+
+void
+chamge_arbiter_backend_approve (ChamgeArbiterBackend * self,
+    const gchar * edge_id)
+{
+  ChamgeArbiterBackendClass *klass;
+  g_return_if_fail (CHAMGE_IS_ARBITER_BACKEND (self));
+
+  klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+  g_return_if_fail (klass->approve != NULL);
+
+  klass->approve (self, edge_id);
+}
+
+void
+chamge_arbiter_backend_set_edge_handler (ChamgeArbiterBackend * self,
+    ChamgeArbiterBackendEdgeEnrolled edge_enrolled,
+    ChamgeArbiterBackendEdgeDelisted edge_delisted,
+    ChamgeArbiterBackendConnectionRequested edge_connection_requested)
+{
+  ChamgeArbiterBackendPrivate *priv =
+      chamge_arbiter_backend_get_instance_private (self);
+
+  g_return_if_fail (CHAMGE_IS_ARBITER_BACKEND (self));
+
+  if (edge_enrolled != NULL) {
+    priv->edge_enrolled =
+        g_cclosure_new (G_CALLBACK (edge_enrolled), self, NULL);
+    g_closure_set_marshal (priv->edge_enrolled, g_cclosure_marshal_generic);
+  }
+
+  if (edge_delisted != NULL) {
+    priv->edge_delisted =
+        g_cclosure_new (G_CALLBACK (edge_delisted), self, NULL);
+    g_closure_set_marshal (priv->edge_delisted, g_cclosure_marshal_generic);
+  }
+
+  if (edge_connection_requested != NULL) {
+    priv->edge_connection_requested =
+        g_cclosure_new (G_CALLBACK (edge_connection_requested), self, NULL);
+    g_closure_set_marshal (priv->edge_connection_requested,
+        g_cclosure_marshal_generic);
+  }
 }

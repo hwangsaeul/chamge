@@ -2,6 +2,10 @@ chamge_install_header_subdir = join_paths(chamge_api_name, 'chamge')
 
 configure_file(output: 'config.h', configuration: cdata)
 
+schema = gnome.compile_schemas (
+  depend_files: files('org.hwangsaeul.Chamge1.Arbiter.AMQP.gschema.xml'),
+)
+
 source_h = [
   'types.h',
   'node.h',
@@ -48,7 +52,7 @@ libchamge = library(
   version: libversion,
   soversion: soversion,
   include_directories: chamge_incs,
-  dependencies: [ gobject_dep ],
+  dependencies: [ gobject_dep, gio_dep, rabbitmq_dep, json_glib_dep ],
   c_args: chamge_c_args,
   link_args: common_ldflags,
   install: true
@@ -56,8 +60,8 @@ libchamge = library(
 
 libchamge_dep = declare_dependency(link_with: libchamge,
   include_directories: [ chamge_incs ],
-  dependencies: [ gobject_dep, rabbitmq_dep ],
-  sources: [ chamge_enums_h ],
+  dependencies: [ gobject_dep, gio_dep, rabbitmq_dep ],
+  sources: [ chamge_enums_h, schema ],
 )
 
 subdir('dbus')

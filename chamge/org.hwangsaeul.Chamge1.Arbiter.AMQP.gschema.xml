@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<schemalist>
+  <schema id="org.hwangsaeul.Chamge1.Arbiter.AMQP" path="/org/hwangsaeul/Chamge1/Arbiter/AMQP/">
+    <key name="amqp-uri" type="s">
+      <default>"amqp://pkpmvsbh:FG-b18KCWuyxrjcNKGc8O804zh2INpN4@ferret.rmq.cloudamqp.com/pkpmvsbh"</default>
+    </key>
+    <key name="amqp-channel" type="i">
+      <default>1</default>
+    </key>
+    <key name="enroll-queue-name" type="s">
+      <default>"enroll"</default>
+    </key>
+    <key name="enroll-exchange-name" type="s">
+      <default>"amq.direct"</default>
+    </key>
+    <key name="enroll-bind-key" type="s">
+      <default>"bind-key"</default>
+    </key>
+  </schema>
+</schemalist>

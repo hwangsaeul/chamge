@@ -32,20 +32,41 @@ struct _ChamgeArbiterBackendClass
   ChamgeReturn  (* deactivate)                  (ChamgeArbiterBackend  *self);
 
   void          (* approve)                     (ChamgeArbiterBackend  *self,
-                                                 const gchar           *uid);    
+                                                 const gchar           *edge_id);
+
+  void          (* edge_enrolled)               (ChamgeArbiterBackend  *self,
+                                                 const gchar           *edge_id);
 };
 
-ChamgeArbiterBackend   *chamge_arbiter_backend_new      (ChamgeArbiter            *edge);
+typedef void (*ChamgeArbiterBackendEdgeEnrolled)        (const gchar           *edge_id, 
+                                                         ChamgeArbiterBackend  *arbiter_backend);
 
-ChamgeReturn            chamge_arbiter_backend_enroll   (ChamgeArbiterBackend     *self);
+typedef void (*ChamgeArbiterBackendEdgeDelisted)        (const gchar           *edge_id, 
+                                                         ChamgeArbiterBackend  *arbiter_backend);
 
-ChamgeReturn            chamge_arbiter_backend_delist   (ChamgeArbiterBackend     *self);
+typedef void (*ChamgeArbiterBackendConnectionRequested) (const gchar           *edge_id, 
+                                                         ChamgeArbiterBackend  *arbiter_backend);
 
-ChamgeReturn            chamge_arbiter_backend_activate (ChamgeArbiterBackend     *self);
+ChamgeArbiterBackend   *chamge_arbiter_backend_new      (ChamgeArbiter         *arbiter);
 
-ChamgeReturn            chamge_arbiter_backend_deactivate
-                                                        (ChamgeArbiterBackend     *self);
+ChamgeReturn    chamge_arbiter_backend_enroll   (ChamgeArbiterBackend  *self);
 
+ChamgeReturn    chamge_arbiter_backend_delist   (ChamgeArbiterBackend  *self);
+
+ChamgeReturn    chamge_arbiter_backend_activate (ChamgeArbiterBackend  *self);
+
+ChamgeReturn    chamge_arbiter_backend_deactivate
+                                                (ChamgeArbiterBackend  *self);
+
+void    chamge_arbiter_backend_approve          (ChamgeArbiterBackend  *self,
+                                                 const gchar           *edge_id);
+
+void    chamge_arbiter_backend_set_edge_handler (ChamgeArbiterBackend  *self,
+                                                 ChamgeArbiterBackendEdgeEnrolled       edge_enrolled,
+                                                 ChamgeArbiterBackendEdgeDelisted       edge_delisted,
+                                                 ChamgeArbiterBackendConnectionRequested
+                                                                                        edge_connection_requested);
+                                
 G_END_DECLS
 
 #endif // __CHAMGE_ARBITER_BACKEND_H__

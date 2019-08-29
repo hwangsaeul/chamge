@@ -46,6 +46,7 @@ gio_dep = [dependency('gio-2.0', version: glib_req_version,
 gobject_dep = dependency('gobject-2.0', version: glib_req_version,
     fallback: ['glib', 'libgobject_dep'])
 rabbitmq_dep = dependency('librabbitmq', version: '>= 0.9.0')
+json_glib_dep = dependency ('json-glib-1.0', version: '>= 1.4.0')
 
 gnome = import('gnome')
 python3 = import('python').find_installation()
