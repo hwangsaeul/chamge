@@ -7,21 +7,27 @@
 #include "config.h"
 
 #include "amqp-arbiter-backend.h"
+#include "amqp/amqp-rpc.h"
 
 #include <gio/gio.h>
-#include <amqp.h>
-#include <amqp_tcp_socket.h>
 #include <json-glib/json-glib.h>
 
 #define AMQP_ARBITER_BACKEND_SCHEMA_ID "org.hwangsaeul.Chamge1.Arbiter.AMQP"
+#define DEFAULT_CONTENT_TYPE "application/json"
+
+typedef struct _AmqpReturnArguments
+{
+  gchar *reply_queue;
+  guint correlation_id;
+} AmqpReturnAuguments;
 
 struct _ChamgeAmqpArbiterBackend
 {
   ChamgeArbiterBackend parent;
   GSettings *settings;
 
-  amqp_connection_state_t amqp_conn;
-  amqp_socket_t *amqp_socket;
+  AmqpReturnAuguments amqp_return_arg;
+  ChamgeAmqpRpc *amqp_rpc;
 
   gboolean activated;
   guint process_id;
@@ -38,59 +44,37 @@ chamge_amqp_arbiter_backend_enroll (ChamgeArbiterBackend * arbiter_backend)
   g_autofree gchar *amqp_enroll_q_name = NULL;
   g_autofree gchar *amqp_exchange_name = NULL;
   gint amqp_channel;
-
-  struct amqp_connection_info amqp_c_info;
-  amqp_bytes_t queue;
-  amqp_queue_declare_ok_t *amqp_r = NULL;
+  GValue value_str = G_VALUE_INIT;
+  GValue value_int = G_VALUE_INIT;
 
   ChamgeAmqpArbiterBackend *self =
       CHAMGE_AMQP_ARBITER_BACKEND (arbiter_backend);
 
+  /* get configuration from gsetting */
   amqp_uri = g_settings_get_string (self->settings, "amqp-uri");
   g_assert_nonnull (amqp_uri);
-
   amqp_channel = g_settings_get_int (self->settings, "amqp-channel");
-
-  amqp_parse_url (amqp_uri, &amqp_c_info);
-
-  g_debug ("parsed amqp uri (host: %s, vhost: %s)", amqp_c_info.host,
-      amqp_c_info.vhost);
-
-  amqp_socket_open (self->amqp_socket, amqp_c_info.host, amqp_c_info.port);
-
-  /*
-   * TODO: The authentication method should be EXTERNAL
-   * if we don't want to share user/passwd
-   */
-  amqp_login (self->amqp_conn, amqp_c_info.vhost, 0, 131072, 0,
-      AMQP_SASL_METHOD_PLAIN, amqp_c_info.user, amqp_c_info.password);
-  amqp_channel_open (self->amqp_conn, amqp_channel);
-  amqp_get_rpc_reply (self->amqp_conn);
-
   amqp_enroll_q_name =
       g_settings_get_string (self->settings, "enroll-queue-name");
-  queue = amqp_cstring_bytes (amqp_enroll_q_name);
-  amqp_r =
-      amqp_queue_declare (self->amqp_conn, amqp_channel, queue, 0, 0, 0, 1,
-      amqp_empty_table);
-  amqp_get_rpc_reply (self->amqp_conn);
-
-  g_debug ("declaring a queue : %s", amqp_r->queue.bytes);
-
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
 
-  amqp_queue_bind (self->amqp_conn, amqp_channel, amqp_r->queue,
-      amqp_cstring_bytes (amqp_exchange_name), queue, amqp_empty_table);
+  /* set amqp login information */
+  g_value_init (&value_str, G_TYPE_STRING);
+  g_value_init (&value_int, G_TYPE_UINT);
 
-  g_debug ("binding a queue (exchange: %s, bind_key: %s)", amqp_exchange_name,
-      amqp_enroll_q_name);
+  g_value_set_string (&value_str, amqp_uri);
+  g_object_set_property (G_OBJECT (self->amqp_rpc), "url", &value_str);
 
-  /* FIXME: A empty consuming MUST be called after binding, but it blocks until
-     a message is coming. This consuming call should be revised to accept timeout */
-  amqp_basic_consume (self->amqp_conn, amqp_channel, amqp_r->queue,
-      amqp_empty_bytes, 0, 0, 0, amqp_empty_table);
-  amqp_get_rpc_reply (self->amqp_conn);
+  g_value_set_uint (&value_int, amqp_channel);
+  g_object_set_property (G_OBJECT (self->amqp_rpc), "channel", &value_int);
+
+  g_return_val_if_fail (chamge_amqp_rpc_login (self->amqp_rpc) ==
+      CHAMGE_RETURN_OK, CHAMGE_RETURN_FAIL);
+
+  g_return_val_if_fail (chamge_amqp_rpc_subscribe (self->amqp_rpc,
+          amqp_exchange_name, amqp_enroll_q_name) != CHAMGE_RETURN_FAIL,
+      CHAMGE_RETURN_FAIL);
 
   return CHAMGE_RETURN_OK;
 }
@@ -107,18 +91,26 @@ _handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root)
   JsonObject *json_object = NULL;
   const gchar *edge_id = NULL;
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+  gchar *body = NULL;;
 
   /* TODO: validate json value */
-
   json_object = json_node_get_object (root);
   if (json_object_has_member (json_object, "edge-id")) {
     JsonNode *node = json_object_get_member (json_object, "edge-id");
     edge_id = json_node_get_string (node);
   }
-
+  /* TODO 
+   * body need to be filled with real data
+   */
   if (edge_id != NULL) {
     klass->edge_enrolled (CHAMGE_ARBITER_BACKEND (self), edge_id);
+    body = g_strdup ("{\"result\":\"enrolled\"}");
+  } else {
+    body = g_strdup ("{\"result\":\"edge_id does not exist\"}");
   }
+
+  chamge_amqp_rpc_respond (self->amqp_rpc, body,
+      self->amqp_return_arg.reply_queue, self->amqp_return_arg.correlation_id);
 }
 
 static void
@@ -152,59 +144,21 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
 static gboolean
 _process_amqp_message (ChamgeAmqpArbiterBackend * self)
 {
-  amqp_rpc_reply_t amqp_rpc_res;
-  amqp_envelope_t envelope;
-
-  struct timeval timeout = { 1, 0 };
+  gchar *body = NULL;
+  ChamgeReturn ret;
 
   if (!self->activated)
     return G_SOURCE_REMOVE;
 
-  amqp_maybe_release_buffers (self->amqp_conn);
+  ret =
+      chamge_amqp_rpc_listen (self->amqp_rpc, &body,
+      &self->amqp_return_arg.reply_queue,
+      &self->amqp_return_arg.correlation_id);
 
-  amqp_rpc_res = amqp_consume_message (self->amqp_conn, &envelope, &timeout, 0);
-
-  if (amqp_rpc_res.reply_type == AMQP_RESPONSE_LIBRARY_EXCEPTION
-      && amqp_rpc_res.library_error == AMQP_STATUS_TIMEOUT) {
-    return G_SOURCE_CONTINUE;
+  if (ret == CHAMGE_RETURN_OK) {
+    _process_json_message (self, body, strlen (body));
+    g_free (body);
   }
-
-  if (amqp_rpc_res.reply_type != AMQP_RESPONSE_NORMAL) {
-    g_debug ("abnormal response: %x", amqp_rpc_res.reply_type);
-    goto out;
-  }
-
-  if (envelope.message.body.bytes == NULL) {
-    g_debug ("no reply queue in request message");
-    goto out;
-  }
-
-  g_debug ("Delivery %u, exchange %.*s routingkey %.*s",
-      (unsigned) envelope.delivery_tag, (int) envelope.exchange.len,
-      (char *) envelope.exchange.bytes, (int) envelope.routing_key.len,
-      (char *) envelope.routing_key.bytes);
-
-  /* if the content-type isn't 'application/json', let's drop */
-  if (!(envelope.message.properties._flags & AMQP_BASIC_CONTENT_TYPE_FLAG)
-      || strlen ("application/json") !=
-      envelope.message.properties.content_type.len
-      || g_ascii_strcasecmp ("application/json",
-          envelope.message.properties.content_type.bytes)
-      ) {
-    g_debug ("invalid content type");
-
-    goto out;
-  }
-
-  g_debug ("Content-type: %.*s",
-      (int) envelope.message.properties.content_type.len,
-      (char *) envelope.message.properties.content_type.bytes);
-
-  _process_json_message (self, envelope.message.body.bytes,
-      envelope.message.body.len);
-
-out:
-  amqp_destroy_envelope (&envelope);
 
   return G_SOURCE_CONTINUE;
 }
@@ -261,11 +215,7 @@ chamge_amqp_arbiter_backend_dispose (GObject * object)
   }
 
   g_clear_object (&self->settings);
-
-  if (self->amqp_conn != NULL) {
-    amqp_destroy_connection (self->amqp_conn);
-    self->amqp_conn = NULL;
-  }
+  g_clear_object (&self->amqp_rpc);
 
   G_OBJECT_CLASS (chamge_amqp_arbiter_backend_parent_class)->dispose (object);
 }
@@ -289,11 +239,8 @@ chamge_amqp_arbiter_backend_class_init (ChamgeAmqpArbiterBackendClass * klass)
 static void
 chamge_amqp_arbiter_backend_init (ChamgeAmqpArbiterBackend * self)
 {
-  /* TODO: load settings from schema source */
   self->settings = g_settings_new (AMQP_ARBITER_BACKEND_SCHEMA_ID);
+  self->amqp_rpc = chamge_amqp_rpc_new ();
 
-  self->amqp_conn = amqp_new_connection ();
-  self->amqp_socket = amqp_tcp_socket_new (self->amqp_conn);
-
-  g_assert_nonnull (self->amqp_socket);
+  g_assert_nonnull (self->amqp_rpc);
 }

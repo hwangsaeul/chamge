@@ -25,6 +25,7 @@ source_c = [
   'edge-backend.c',
   'mock-edge-backend.c',
   'amqp-edge-backend.c',
+  'amqp/amqp-rpc.c',
 ]
 
 install_headers(source_h, subdir: chamge_install_header_subdir)
