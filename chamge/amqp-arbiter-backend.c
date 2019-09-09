@@ -14,6 +14,7 @@
 #include <json-glib/json-glib.h>
 
 #define AMQP_ARBITER_BACKEND_SCHEMA_ID "org.hwangsaeul.Chamge1.Arbiter.AMQP"
+#define DEFAULT_CONTENT_TYPE "application/json"
 
 struct _ChamgeAmqpArbiterBackend
 {
@@ -75,7 +76,7 @@ chamge_amqp_arbiter_backend_enroll (ChamgeArbiterBackend * arbiter_backend)
       amqp_empty_table);
   amqp_get_rpc_reply (self->amqp_conn);
 
-  g_debug ("declaring a queue : %s", amqp_r->queue.bytes);
+  g_debug ("declaring a queue : %s", (gchar *) amqp_r->queue.bytes);
 
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
@@ -102,11 +103,13 @@ chamge_amqp_arbiter_backend_delist (ChamgeArbiterBackend * arbiter_backend)
 }
 
 static void
-_handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root)
+_handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root,
+    const gchar * reply_queue, guint correlation_id)
 {
   JsonObject *json_object = NULL;
   const gchar *edge_id = NULL;
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+  g_autofree gchar *body = NULL;
 
   /* TODO: validate json value */
 
@@ -116,14 +119,49 @@ _handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root)
     edge_id = json_node_get_string (node);
   }
 
+  /* TODO: body need to be filled with real data */
   if (edge_id != NULL) {
     klass->edge_enrolled (CHAMGE_ARBITER_BACKEND (self), edge_id);
+    body = g_strdup ("{\"result\":\"enrolled\"}");
+  } else {
+    body = g_strdup ("{\"result\":\"edge_id does not exist\"}");
+  }
+  {
+    amqp_basic_properties_t amqp_props;
+    g_autofree gchar *correlation_id_str = NULL;
+    g_autofree gchar *content_type_str = g_strdup (DEFAULT_CONTENT_TYPE);
+
+    amqp_props._flags =
+        AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
+    amqp_props.content_type = amqp_cstring_bytes (content_type_str);
+    amqp_props.delivery_mode = 2;       /* persistent delivery mode */
+
+    amqp_props.reply_to.bytes = NULL;
+    amqp_props.reply_to.len = 0;
+
+    if (correlation_id != 0) {
+      amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
+      correlation_id_str = g_strdup_printf ("%u", correlation_id);
+      amqp_props.correlation_id = amqp_cstring_bytes (correlation_id_str);
+    } else {
+      amqp_props.correlation_id.bytes = NULL;
+      amqp_props.correlation_id.len = 0;
+    }
+
+    /*
+     * publish
+     */
+    g_debug ("publishing to [%s]", reply_queue);
+    g_debug ("      correlation id : %d body : \"%s\"", correlation_id, body);
+    amqp_basic_publish (self->amqp_conn, 1, amqp_cstring_bytes (""),
+        amqp_cstring_bytes (reply_queue), 0, 0, &amqp_props,
+        amqp_cstring_bytes (body));
   }
 }
 
 static void
 _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
-    gssize len)
+    gssize len, const gchar * reply_queue, guint correlation_id)
 {
   g_autoptr (JsonParser) parser = json_parser_new ();
   g_autoptr (GError) error = NULL;
@@ -144,7 +182,7 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
     g_debug ("method: %s", method);
 
     if (!g_strcmp0 (method, "enroll")) {
-      _handle_edge_enroll (self, root);
+      _handle_edge_enroll (self, root, reply_queue, correlation_id);
     }
   }
 }
@@ -154,7 +192,8 @@ _process_amqp_message (ChamgeAmqpArbiterBackend * self)
 {
   amqp_rpc_reply_t amqp_rpc_res;
   amqp_envelope_t envelope;
-
+  g_autofree gchar *reply_queue = NULL;
+  guint correlation_id = 0;
   struct timeval timeout = { 1, 0 };
 
   if (!self->activated)
@@ -186,22 +225,44 @@ _process_amqp_message (ChamgeAmqpArbiterBackend * self)
 
   /* if the content-type isn't 'application/json', let's drop */
   if (!(envelope.message.properties._flags & AMQP_BASIC_CONTENT_TYPE_FLAG)
-      || strlen ("application/json") !=
+      || strlen (DEFAULT_CONTENT_TYPE) !=
       envelope.message.properties.content_type.len
-      || g_ascii_strcasecmp ("application/json",
-          envelope.message.properties.content_type.bytes)
+      || g_ascii_strncasecmp (DEFAULT_CONTENT_TYPE,
+          envelope.message.properties.content_type.bytes,
+          envelope.message.properties.content_type.len)
       ) {
-    g_debug ("invalid content type");
+    g_debug ("invalid content type %s",
+        (gchar *) envelope.message.properties.content_type.bytes);
 
     goto out;
   }
 
-  g_debug ("Content-type: %.*s",
+  if (envelope.message.properties.reply_to.len > 0 &&
+      (strlen (envelope.message.properties.reply_to.bytes) >=
+          envelope.message.properties.reply_to.len)) {
+    reply_queue = g_strndup (envelope.message.properties.reply_to.bytes,
+        envelope.message.properties.reply_to.len);
+  } else {
+    g_debug ("not exist replay_to in request message's property");
+    goto out;
+  }
+
+  if (envelope.message.properties.correlation_id.len > 0 &&
+      (strlen (envelope.message.properties.correlation_id.bytes) >=
+          envelope.message.properties.correlation_id.len)) {
+    g_autofree gchar *id =
+        g_strndup (envelope.message.properties.correlation_id.bytes,
+        envelope.message.properties.correlation_id.len);
+    correlation_id = atoi (id);
+  }
+
+  g_debug ("Content-type: %.*s, replay_to : %s, correlation_id : %d",
       (int) envelope.message.properties.content_type.len,
-      (char *) envelope.message.properties.content_type.bytes);
+      (char *) envelope.message.properties.content_type.bytes,
+      reply_queue, correlation_id);
 
   _process_json_message (self, envelope.message.body.bytes,
-      envelope.message.body.len);
+      envelope.message.body.len, reply_queue, correlation_id);
 
 out:
   amqp_destroy_envelope (&envelope);
