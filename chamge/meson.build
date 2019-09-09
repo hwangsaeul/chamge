@@ -3,7 +3,8 @@ chamge_install_header_subdir = join_paths(chamge_api_name, 'chamge')
 configure_file(output: 'config.h', configuration: cdata)
 
 schema = gnome.compile_schemas (
-  depend_files: files('org.hwangsaeul.Chamge1.Arbiter.AMQP.gschema.xml'),
+  depend_files: files('org.hwangsaeul.Chamge1.Arbiter.AMQP.gschema.xml',
+                      'org.hwangsaeul.Chamge1.Edge.AMQP.gschema.xml'),
 )
 
 source_h = [
