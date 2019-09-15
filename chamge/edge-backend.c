@@ -18,14 +18,16 @@
 typedef struct
 {
   ChamgeEdge *edge;
+  gchar *uid;
 } ChamgeEdgeBackendPrivate;
 
 typedef enum
 {
   PROP_EDGE = 1,
+  PROP_UID,
 
   /*< private > */
-  PROP_LAST = PROP_EDGE
+  PROP_LAST = PROP_UID
 } _ChamgeEdgeBackendProperty;
 
 static GParamSpec *properties[PROP_LAST + 1];
@@ -46,6 +48,9 @@ chamge_edge_backend_get_property (GObject * object,
     case PROP_EDGE:
       g_value_set_object (value, priv->edge);
       break;
+    case PROP_UID:
+      g_value_set_string (value, priv->uid);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -63,6 +68,9 @@ chamge_edge_backend_set_property (GObject * object,
   switch ((_ChamgeEdgeBackendProperty) prop_id) {
     case PROP_EDGE:
       priv->edge = g_value_dup_object (value);
+      break;
+    case PROP_UID:
+      priv->uid = g_value_dup_string (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -94,6 +102,9 @@ chamge_edge_backend_class_init (ChamgeEdgeBackendClass * klass)
   properties[PROP_EDGE] = g_param_spec_object ("edge", "edge", "edge",
       CHAMGE_TYPE_EDGE,
       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  properties[PROP_UID] = g_param_spec_string ("uid", "uid", "uid", NULL,
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+
 
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
@@ -108,12 +119,14 @@ ChamgeEdgeBackend *
 chamge_edge_backend_new (ChamgeEdge * edge)
 {
   ChamgeBackend backend;
+  gchar *uid;
   GType backend_type;
   g_autoptr (ChamgeEdgeBackend) edge_backend = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_EDGE (edge), NULL);
 
   g_object_get (edge, "backend", &backend, NULL);
+  g_object_get (edge, "uid", &uid, NULL);
 
   if (backend == CHAMGE_BACKEND_AMQP) {
     backend_type = CHAMGE_TYPE_AMQP_EDGE_BACKEND;
@@ -121,7 +134,7 @@ chamge_edge_backend_new (ChamgeEdge * edge)
     backend_type = CHAMGE_TYPE_MOCK_EDGE_BACKEND;
   }
 
-  edge_backend = g_object_new (backend_type, "edge", edge, NULL);
+  edge_backend = g_object_new (backend_type, "edge", edge, "uid", uid, NULL);
   return g_steal_pointer (&edge_backend);
 }
 
