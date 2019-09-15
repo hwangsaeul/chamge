@@ -52,9 +52,12 @@ chamge_edge_enroll (ChamgeNode * node)
   ChamgeEdge *self = CHAMGE_EDGE (node);
   ChamgeEdgePrivate *priv = chamge_edge_get_instance_private (self);
   ChamgeReturn ret;
+  gchar *uid;
 
-  if (priv->edge_backend == NULL)
+  if (priv->edge_backend == NULL) {
+    g_object_get (self, "uid", &uid, NULL);
     priv->edge_backend = chamge_edge_backend_new (self);
+  }
 
   ret = chamge_edge_backend_enroll (priv->edge_backend);
 
