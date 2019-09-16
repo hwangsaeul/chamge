@@ -306,9 +306,26 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
   g_autofree gchar *amqp_enroll_q_name = NULL;
   g_autofree gchar *amqp_exchange_name = NULL;
   g_autofree gchar *response_body = NULL;
+  g_autofree gchar *request_body = NULL;
   gint amqp_channel = 1;
 
+  g_autofree gchar *edge_id = NULL;
+  ChamgeEdge *edge = NULL;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+
   ChamgeAmqpEdgeBackend *self = CHAMGE_AMQP_EDGE_BACKEND (edge_backend);
+
+  g_object_get (self, "edge", &edge, NULL);
+
+  if (edge == NULL) {
+    g_debug ("failed to get edge");
+    goto out;
+  }
+
+  if (chamge_node_get_uid (CHAMGE_NODE (edge), &edge_id) != CHAMGE_RETURN_OK) {
+    g_debug ("failed to get edge_id from node(parent)");
+    goto out;
+  }
 
   /* get configuration from gsetting */
   amqp_uri = g_settings_get_string (self->settings, "amqp-uri");
@@ -319,19 +336,25 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
 
-  g_return_val_if_fail (_amqp_rpc_login (self->amqp_conn, self->amqp_socket,
-          amqp_uri, amqp_channel) == CHAMGE_RETURN_OK, CHAMGE_RETURN_FAIL);
+  if (_amqp_rpc_login (self->amqp_conn, self->amqp_socket,
+          amqp_uri, amqp_channel) != CHAMGE_RETURN_OK) {
+    g_debug ("failed to amqp login");
+    goto out;
+  }
 
   /* TODO
    * request-body need to be filled with real request data
    */
+  request_body =
+      g_strdup_printf ("{\"method\":\"enroll\",\"edge-id\":\"%s\"}", edge_id);
   response_body =
-      _amqp_rpc_request (self->amqp_conn, amqp_channel,
-      "{\"method\":\"enroll\",\"edge-id\":\"abcd1234\"}", amqp_exchange_name,
-      amqp_enroll_q_name);
+      _amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
+      amqp_exchange_name, amqp_enroll_q_name);
   g_debug ("received response to enroll : %s", response_body);
+  ret = CHAMGE_RETURN_OK;
 
-  return CHAMGE_RETURN_OK;
+out:
+  return ret;
 }
 
 static ChamgeReturn

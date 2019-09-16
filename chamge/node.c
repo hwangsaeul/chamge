@@ -69,6 +69,13 @@ chamge_node_deactivate_default (ChamgeNode * self)
   return CHAMGE_RETURN_OK;
 }
 
+static gchar *
+chamge_node_get_uid_default (ChamgeNode * self)
+{
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
+  return g_strdup (priv->uid);
+}
+
 static void
 chamge_node_dispose (GObject * object)
 {
@@ -161,6 +168,7 @@ chamge_node_class_init (ChamgeNodeClass * klass)
   klass->delist = chamge_node_delist_default;
   klass->activate = chamge_node_activate_default;
   klass->deactivate = chamge_node_deactivate_default;
+  klass->get_uid = chamge_node_get_uid_default;
 }
 
 static void
@@ -317,6 +325,24 @@ chamge_node_deactivate (ChamgeNode * self)
     locker = g_mutex_locker_new (&priv->mutex);
     priv->state = CHAMGE_NODE_STATE_ENROLLED;
   }
+
+  return ret;
+}
+
+ChamgeReturn
+chamge_node_get_uid (ChamgeNode * self, gchar ** uid)
+{
+  ChamgeNodeClass *klass;
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+
+  g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
+
+  klass = CHAMGE_NODE_GET_CLASS (self);
+  g_return_val_if_fail (klass->get_uid != NULL, CHAMGE_RETURN_FAIL);
+
+  *uid = klass->get_uid (self);
+  if (*uid == NULL)
+    ret = CHAMGE_RETURN_FAIL;
 
   return ret;
 }

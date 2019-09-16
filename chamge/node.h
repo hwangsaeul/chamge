@@ -40,6 +40,7 @@ struct _ChamgeNodeClass
   ChamgeReturn (* activate)             (ChamgeNode *self);
   ChamgeReturn (* deactivate)           (ChamgeNode *self);
 
+  gchar *      (* get_uid)              (ChamgeNode *self);
 };
 
 CHAMGE_API_EXPORT
@@ -53,6 +54,9 @@ ChamgeReturn chamge_node_activate       (ChamgeNode *self);
 
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_deactivate     (ChamgeNode *self);
+
+CHAMGE_API_EXPORT
+ChamgeReturn chamge_node_get_uid        (ChamgeNode *self, gchar ** uid);
 
 G_END_DECLS
 
