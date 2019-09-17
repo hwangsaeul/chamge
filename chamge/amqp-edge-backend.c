@@ -96,58 +96,6 @@ _amqp_declare_queue (const amqp_connection_state_t conn,
   return CHAMGE_RETURN_OK;
 }
 
-static ChamgeReturn
-_amqp_property_set (amqp_basic_properties_t * const props,
-    const guint correlation_id, const gchar * reply_queue_name)
-{
-  gchar *correlation_id_str = NULL;
-  gchar *content_type_str = g_strdup (DEFAULT_CONTENT_TYPE);
-
-  props->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
-  props->content_type = amqp_cstring_bytes (content_type_str);
-  props->delivery_mode = 2;     /* persistent delivery mode */
-
-  if (reply_queue_name != NULL) {
-    gchar *reply_to_queue = (gchar *) g_strdup (reply_queue_name);
-    g_assert_nonnull (reply_to_queue);
-    props->reply_to = amqp_cstring_bytes (reply_to_queue);
-    props->_flags |= AMQP_BASIC_REPLY_TO_FLAG;
-  } else {
-    props->reply_to.bytes = NULL;
-    props->reply_to.bytes = 0;
-  }
-
-  if (correlation_id != 0) {
-    guint correlation_id_str_len = correlation_id / 10 + 2;
-    props->_flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
-    correlation_id_str =
-        (char *) calloc (correlation_id_str_len, sizeof (char));
-    g_return_val_if_fail (correlation_id_str != NULL, CHAMGE_RETURN_FAIL);
-    g_snprintf (correlation_id_str, correlation_id_str_len, "%u",
-        correlation_id);
-    props->correlation_id = amqp_cstring_bytes (correlation_id_str);
-  } else {
-    props->correlation_id.bytes = NULL;
-    props->correlation_id.len = 0;
-  }
-
-  g_debug ("content type : %s , correlation id : %s",
-      (gchar *) props->content_type.bytes,
-      (gchar *) props->correlation_id.bytes);
-  return CHAMGE_RETURN_OK;
-}
-
-static void
-_amqp_property_free (amqp_basic_properties_t * const props)
-{
-  if (props->content_type.bytes)
-    amqp_bytes_free (props->content_type);
-  if (props->reply_to.bytes)
-    amqp_bytes_free (props->reply_to);
-  if (props->correlation_id.bytes)
-    amqp_bytes_free (props->correlation_id);
-}
-
 /*
   reference from tools/common.c of rabbitmq-c
 */
@@ -256,8 +204,8 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
     const gchar * request, const gchar * exchange, const gchar * queue_name)
 {
   amqp_bytes_t amqp_reply_queue;
-  amqp_basic_properties_t amqp_props;
-  gchar *response_body;
+  amqp_basic_properties_t amqp_props = { 0 };
+  gchar *response_body = NULL;
 
   g_return_val_if_fail (queue_name != NULL, NULL);
 
@@ -268,11 +216,19 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
 
   g_debug ("declare a queue for reply : %s", (gchar *) amqp_reply_queue.bytes);
 
-  /* send the message */
-  if (_amqp_property_set (&amqp_props, channel,
-          (gchar *) amqp_reply_queue.bytes) != CHAMGE_RETURN_OK) {
-    g_error ("create property failed.");
-    return NULL;
+  /* property setting to send rpc request */
+  {
+    amqp_props._flags =
+        AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
+
+    amqp_props.content_type = amqp_cstring_bytes (DEFAULT_CONTENT_TYPE);
+    amqp_props.delivery_mode = 2;       /* persistent delivery mode */
+
+    amqp_props._flags |= AMQP_BASIC_REPLY_TO_FLAG;
+    amqp_props.reply_to = amqp_reply_queue;
+
+    amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
+    amqp_props.correlation_id = amqp_cstring_bytes ("1");
   }
 
   /* send requst to queue_name */
@@ -284,7 +240,7 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
         amqp_cstring_bytes (request));
     if (r < 0) {
       g_error ("publish can not be done >> %s", amqp_error_string2 (r));
-      return NULL;
+      goto out;
     }
     g_debug ("published to queue[%s], exchange[%s], request[%s]", queue_name,
         exchange, request);
@@ -293,7 +249,7 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
   /* wait an answer */
   response_body = _amqp_get_response (amqp_conn, amqp_reply_queue);
 
-  _amqp_property_free (&amqp_props);
+out:
   amqp_bytes_free (amqp_reply_queue);
   return response_body;
 }
