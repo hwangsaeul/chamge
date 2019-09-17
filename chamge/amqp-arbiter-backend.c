@@ -102,14 +102,13 @@ chamge_amqp_arbiter_backend_delist (ChamgeArbiterBackend * arbiter_backend)
   return CHAMGE_RETURN_OK;
 }
 
-static void
-_handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root,
-    const gchar * reply_queue, guint correlation_id)
+static gchar *
+_handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root)
 {
   JsonObject *json_object = NULL;
   const gchar *edge_id = NULL;
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
-  g_autofree gchar *body = NULL;
+  gchar *response = NULL;
 
   /* TODO: validate json value */
 
@@ -122,56 +121,30 @@ _handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root,
   /* TODO: body need to be filled with real data */
   if (edge_id != NULL) {
     klass->edge_enrolled (CHAMGE_ARBITER_BACKEND (self), edge_id);
-    body = g_strdup ("{\"result\":\"enrolled\"}");
+    response = g_strdup ("{\"result\":\"enrolled\"}");
   } else {
-    body = g_strdup ("{\"result\":\"edge_id does not exist\"}");
+    response = g_strdup ("{\"result\":\"edge_id does not exist\"}");
   }
-  {
-    amqp_basic_properties_t amqp_props;
-    g_autofree gchar *correlation_id_str = NULL;
-    g_autofree gchar *content_type_str = g_strdup (DEFAULT_CONTENT_TYPE);
-
-    amqp_props._flags =
-        AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
-    amqp_props.content_type = amqp_cstring_bytes (content_type_str);
-    amqp_props.delivery_mode = 2;       /* persistent delivery mode */
-
-    amqp_props.reply_to.bytes = NULL;
-    amqp_props.reply_to.len = 0;
-
-    if (correlation_id != 0) {
-      amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
-      correlation_id_str = g_strdup_printf ("%u", correlation_id);
-      amqp_props.correlation_id = amqp_cstring_bytes (correlation_id_str);
-    } else {
-      amqp_props.correlation_id.bytes = NULL;
-      amqp_props.correlation_id.len = 0;
-    }
-
-    /*
-     * publish
-     */
-    g_debug ("publishing to [%s]", reply_queue);
-    g_debug ("      correlation id : %d body : \"%s\"", correlation_id, body);
-    amqp_basic_publish (self->amqp_conn, 1, amqp_cstring_bytes (""),
-        amqp_cstring_bytes (reply_queue), 0, 0, &amqp_props,
-        amqp_cstring_bytes (body));
-  }
+  return response;
 }
 
-static void
+
+
+static gchar *
 _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
-    gssize len, const gchar * reply_queue, guint correlation_id)
+    gssize len)
 {
   g_autoptr (JsonParser) parser = json_parser_new ();
   g_autoptr (GError) error = NULL;
+  gchar *response = NULL;
 
   JsonNode *root = NULL;
   JsonObject *json_object = NULL;
 
   if (!json_parser_load_from_data (parser, body, len, &error)) {
     g_debug ("failed to parse body: %s", error->message);
-    return;
+    response = g_strdup_printf ("{\"result\":\"failed to parse body\"}");
+    return response;
   }
 
   root = json_parser_get_root (parser);
@@ -182,9 +155,11 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
     g_debug ("method: %s", method);
 
     if (!g_strcmp0 (method, "enroll")) {
-      _handle_edge_enroll (self, root, reply_queue, correlation_id);
+      response = _handle_edge_enroll (self, root);
     }
   }
+
+  return response;
 }
 
 static gboolean
@@ -193,8 +168,9 @@ _process_amqp_message (ChamgeAmqpArbiterBackend * self)
   amqp_rpc_reply_t amqp_rpc_res;
   amqp_envelope_t envelope;
   g_autofree gchar *reply_queue = NULL;
-  guint correlation_id = 0;
+  g_autofree gchar *correlation_id = NULL;
   struct timeval timeout = { 1, 0 };
+  g_autofree gchar *response = NULL;
 
   if (!self->activated)
     return G_SOURCE_REMOVE;
@@ -237,7 +213,8 @@ _process_amqp_message (ChamgeAmqpArbiterBackend * self)
     goto out;
   }
 
-  if (envelope.message.properties.reply_to.len > 0 &&
+  if ((envelope.message.properties._flags & AMQP_BASIC_REPLY_TO_FLAG) &&
+      envelope.message.properties.reply_to.len > 0 &&
       (strlen (envelope.message.properties.reply_to.bytes) >=
           envelope.message.properties.reply_to.len)) {
     reply_queue = g_strndup (envelope.message.properties.reply_to.bytes,
@@ -247,22 +224,50 @@ _process_amqp_message (ChamgeAmqpArbiterBackend * self)
     goto out;
   }
 
-  if (envelope.message.properties.correlation_id.len > 0 &&
+  if ((envelope.message.properties._flags & AMQP_BASIC_CORRELATION_ID_FLAG) &&
+      envelope.message.properties.correlation_id.len > 0 &&
       (strlen (envelope.message.properties.correlation_id.bytes) >=
           envelope.message.properties.correlation_id.len)) {
-    g_autofree gchar *id =
+    correlation_id =
         g_strndup (envelope.message.properties.correlation_id.bytes,
         envelope.message.properties.correlation_id.len);
-    correlation_id = atoi (id);
   }
 
-  g_debug ("Content-type: %.*s, replay_to : %s, correlation_id : %d",
+  g_debug ("Content-type: %.*s, replay_to : %s, correlation_id : %s",
       (int) envelope.message.properties.content_type.len,
       (char *) envelope.message.properties.content_type.bytes,
       reply_queue, correlation_id);
 
-  _process_json_message (self, envelope.message.body.bytes,
-      envelope.message.body.len, reply_queue, correlation_id);
+  response = _process_json_message (self, envelope.message.body.bytes,
+      envelope.message.body.len);
+
+  if (response == NULL) {
+    g_error ("response is NULL. response should be non null");
+    goto out;
+  }
+  {
+    amqp_basic_properties_t amqp_props;
+
+    memset (&amqp_props, 0, sizeof (amqp_basic_properties_t));
+    amqp_props._flags =
+        AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
+    amqp_props.content_type = amqp_cstring_bytes (DEFAULT_CONTENT_TYPE);
+    amqp_props.delivery_mode = 2;       /* persistent delivery mode */
+
+    if (correlation_id != NULL) {
+      amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
+      amqp_props.correlation_id = amqp_cstring_bytes (correlation_id);
+    }
+
+    /*
+     * publish
+     */
+    g_debug ("publishing to [%s] channel [%d]", reply_queue, envelope.channel);
+    g_debug ("      correlation id [%s] body [%s]", correlation_id, response);
+    amqp_basic_publish (self->amqp_conn, envelope.channel,
+        amqp_cstring_bytes (""), amqp_cstring_bytes (reply_queue), 0, 0,
+        &amqp_props, amqp_cstring_bytes (response));
+  }
 
 out:
   amqp_destroy_envelope (&envelope);
