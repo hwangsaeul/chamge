@@ -217,19 +217,17 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
   g_debug ("declare a queue for reply : %s", (gchar *) amqp_reply_queue.bytes);
 
   /* property setting to send rpc request */
-  {
-    amqp_props._flags =
-        AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
+  amqp_props._flags =
+      AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 
-    amqp_props.content_type = amqp_cstring_bytes (DEFAULT_CONTENT_TYPE);
-    amqp_props.delivery_mode = 2;       /* persistent delivery mode */
+  amqp_props.content_type = amqp_cstring_bytes (DEFAULT_CONTENT_TYPE);
+  amqp_props.delivery_mode = 2; /* persistent delivery mode */
 
-    amqp_props._flags |= AMQP_BASIC_REPLY_TO_FLAG;
-    amqp_props.reply_to = amqp_reply_queue;
+  amqp_props._flags |= AMQP_BASIC_REPLY_TO_FLAG;
+  amqp_props.reply_to = amqp_reply_queue;
 
-    amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
-    amqp_props.correlation_id = amqp_cstring_bytes ("1");
-  }
+  amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
+  amqp_props.correlation_id = amqp_cstring_bytes ("1");
 
   /* send requst to queue_name */
   {
