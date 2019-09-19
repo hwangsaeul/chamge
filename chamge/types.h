@@ -11,6 +11,8 @@
 #error "Only <chamge/chamge.h> can be included directly."
 #endif
 
+#include <gmodule.h>
+
 #ifndef _CHAMGE_EXTERN
 #define _CHAMGE_EXTERN         extern
 #endif
@@ -29,5 +31,14 @@ typedef enum {
   CHAMGE_BACKEND_AMQP,
 } ChamgeBackend;
 
+#define CHAMGE_BACKEND_ERROR      (chamge_backend_error_quark())
+GQuark chamge_backend_error_quark (void);
+
+typedef enum {
+  CHAMGE_BACKEND_ERROR_INVALID_PARAMETER,
+  CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+  CHAMGE_BACKEND_ERROR_INACCESSIBLE,
+  CHAMGE_BACKEND_ERROR_MISSING_PARAMETER,
+} ChamgeBackendError;
 
 #endif // __CHAMGE_TYPES_H__

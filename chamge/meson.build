@@ -17,6 +17,7 @@ source_h = [
 ]
 
 source_c = [
+  'types.c',
   'node.c',
   'arbiter.c',
   'arbiter-backend.c',
