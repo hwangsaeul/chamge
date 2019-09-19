@@ -11,6 +11,7 @@
 #include <gio/gio.h>
 #include <amqp.h>
 #include <amqp_tcp_socket.h>
+#include <json-glib/json-glib.h>
 
 #define AMQP_EDGE_BACKEND_SCHEMA_ID "org.hwangsaeul.Chamge1.Edge.AMQP"
 #define DEFAULT_CONTENT_TYPE "application/json"
@@ -29,72 +30,6 @@ struct _ChamgeAmqpEdgeBackend
 /* *INDENT-OFF* */
 G_DEFINE_TYPE (ChamgeAmqpEdgeBackend, chamge_amqp_edge_backend, CHAMGE_TYPE_EDGE_BACKEND)
 /* *INDENT-ON* */
-
-static ChamgeReturn
-_amqp_rpc_login (amqp_connection_state_t amqp_conn, amqp_socket_t * amqp_socket,
-    const gchar * url, guint channel)
-{
-  amqp_rpc_reply_t amqp_r;
-  struct amqp_connection_info connection_info;
-  g_autofree gchar *str = g_strdup (url);
-
-  amqp_parse_url (str, &connection_info);
-
-  g_return_val_if_fail (connection_info.host != NULL, CHAMGE_RETURN_FAIL);
-  g_return_val_if_fail (connection_info.vhost != NULL, CHAMGE_RETURN_FAIL);
-  g_return_val_if_fail (connection_info.port != 0, CHAMGE_RETURN_FAIL);
-  g_return_val_if_fail (channel != 0, CHAMGE_RETURN_FAIL);
-  g_return_val_if_fail (connection_info.user != NULL, CHAMGE_RETURN_FAIL);
-  g_return_val_if_fail (connection_info.password != NULL, CHAMGE_RETURN_FAIL);
-
-  g_return_val_if_fail (amqp_socket_open (amqp_socket,
-          connection_info.host, connection_info.port) >= 0, CHAMGE_RETURN_FAIL);
-
-  /* TODO: The authentication method should be EXTERNAL
-   * if we don't want to share user/passwd
-   */
-  amqp_login (amqp_conn, connection_info.vhost, 0, 131072, 0,
-      AMQP_SASL_METHOD_PLAIN, connection_info.user, connection_info.password);
-  amqp_channel_open (amqp_conn, channel);
-  amqp_r = amqp_get_rpc_reply (amqp_conn);
-  g_return_val_if_fail (amqp_r.reply_type == AMQP_RESPONSE_NORMAL,
-      CHAMGE_RETURN_FAIL);
-
-  g_debug ("success to login %s:%d/%s id[%s] pwd[%s]",
-      connection_info.host, connection_info.port,
-      connection_info.vhost, connection_info.user, connection_info.password);
-  return CHAMGE_RETURN_OK;
-}
-
-static ChamgeReturn
-_amqp_declare_queue (const amqp_connection_state_t conn,
-    const gchar * queue_name, amqp_bytes_t * queue)
-{
-  amqp_queue_declare_ok_t *amqp_r = NULL;
-  gchar *response_queue_name = NULL;
-
-  if (queue_name == NULL) {
-    amqp_r = amqp_queue_declare (conn, 1, amqp_empty_bytes, 0, 0, 0, 1,
-        amqp_empty_table);
-  } else {
-    amqp_r =
-        amqp_queue_declare (conn, 1, amqp_cstring_bytes (queue_name), 0, 0, 0,
-        1, amqp_empty_table);
-  }
-  if (amqp_r == NULL) {
-    g_error ("Can not declare a new queue or queue does not exist...");
-    return CHAMGE_RETURN_FAIL;
-  }
-  amqp_get_rpc_reply (conn);
-
-  g_assert_nonnull (amqp_r->queue.bytes);
-  response_queue_name = g_strdup (amqp_r->queue.bytes);
-  *queue = amqp_cstring_bytes (response_queue_name);
-
-  g_debug ("create private reply_to queue : name -> %s",
-      (gchar *) queue->bytes);
-  return CHAMGE_RETURN_OK;
-}
 
 /*
   reference from tools/common.c of rabbitmq-c
@@ -156,18 +91,110 @@ _amqp_rpc_reply_string (amqp_rpc_reply_t r)
   }
 }
 
+static ChamgeReturn
+_amqp_rpc_login (amqp_connection_state_t amqp_conn, amqp_socket_t * amqp_socket,
+    const gchar * url, guint channel, GError ** error)
+{
+  amqp_rpc_reply_t amqp_r;
+  struct amqp_connection_info connection_info = { 0 };
+  g_autofree gchar *str = g_strdup (url);
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+
+  g_return_val_if_fail (amqp_conn != NULL, CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (amqp_socket != NULL, CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (url != NULL, CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (channel != 0, CHAMGE_RETURN_FAIL);
+
+  if (amqp_parse_url (str, &connection_info) != AMQP_STATUS_OK) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_INVALID_PARAMETER, "url pasring failure");
+    goto out;
+  }
+
+  if (amqp_socket_open (amqp_socket,
+          connection_info.host, connection_info.port)) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "socket open failure");
+    goto out;
+  }
+
+  /* TODO: The authentication method should be EXTERNAL
+   * if we don't want to share user/passwd
+   */
+  amqp_r = amqp_login (amqp_conn, connection_info.vhost, 0, 131072, 0,
+      AMQP_SASL_METHOD_PLAIN, connection_info.user, connection_info.password);
+  if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "login failure >> %s",
+        _amqp_rpc_reply_string (amqp_r));
+    goto out;
+  }
+  if (!amqp_channel_open (amqp_conn, channel)) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "channel open failure >> %s",
+        _amqp_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
+    goto out;
+  }
+
+  g_debug ("success to login %s:%d/%s id[%s] pwd[%s]",
+      connection_info.host, connection_info.port,
+      connection_info.vhost, connection_info.user, connection_info.password);
+  ret = CHAMGE_RETURN_OK;
+
+out:
+  return ret;
+}
+
+static ChamgeReturn
+_amqp_declare_queue (const amqp_connection_state_t conn,
+    const gchar * queue_name, amqp_bytes_t * queue, GError ** error)
+{
+  amqp_queue_declare_ok_t *amqp_declar_r = NULL;
+  gchar *response_queue_name = NULL;
+
+  g_return_val_if_fail (conn != NULL, CHAMGE_RETURN_FAIL);
+
+  if (queue_name == NULL) {
+    amqp_declar_r = amqp_queue_declare (conn, 1, amqp_empty_bytes, 0, 0, 0, 1,
+        amqp_empty_table);
+  } else {
+    amqp_declar_r =
+        amqp_queue_declare (conn, 1, amqp_cstring_bytes (queue_name), 0, 0, 0,
+        1, amqp_empty_table);
+  }
+  if (amqp_declar_r == NULL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "declare queue failure >> %s",
+        _amqp_rpc_reply_string (amqp_get_rpc_reply (conn)));
+    return CHAMGE_RETURN_FAIL;
+  }
+
+  g_assert_nonnull (amqp_declar_r->queue.bytes);
+  response_queue_name = g_strdup (amqp_declar_r->queue.bytes);
+  if (queue->bytes)
+    amqp_bytes_free (*queue);
+  *queue = amqp_cstring_bytes (response_queue_name);
+
+  g_debug ("create private reply_to queue : name -> %s",
+      (gchar *) queue->bytes);
+  return CHAMGE_RETURN_OK;
+}
 
 static gchar *
 _amqp_get_response (const amqp_connection_state_t conn,
-    const amqp_bytes_t reply_to_queue)
+    const amqp_bytes_t reply_to_queue, GError ** error)
 {
-  gchar *response_body = NULL;
   amqp_rpc_reply_t amqp_r;
   amqp_envelope_t envelope;
+  gchar *response_body = NULL;
 
-  amqp_basic_consume (conn, 1, reply_to_queue, amqp_empty_bytes, 0, 1, 0,
-      amqp_empty_table);
-  amqp_get_rpc_reply (conn);
+  if (amqp_basic_consume (conn, 1, reply_to_queue, amqp_empty_bytes, 0,
+          1, 0, amqp_empty_table) == NULL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "basic consume failure >> %s",
+        _amqp_rpc_reply_string (amqp_get_rpc_reply (conn)));
+    goto out;
+  }
 
   amqp_maybe_release_buffers (conn);
 
@@ -175,9 +202,11 @@ _amqp_get_response (const amqp_connection_state_t conn,
       (gchar *) reply_to_queue.bytes);
   amqp_r = amqp_consume_message (conn, &envelope, NULL, 0);
 
-  if (AMQP_RESPONSE_NORMAL != amqp_r.reply_type) {
-    g_error ("response is not normal. >> %s", _amqp_rpc_reply_string (amqp_r));
-    return NULL;
+  if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "consume msg failure >> %s",
+        _amqp_rpc_reply_string (amqp_r));
+    goto out;
   }
 
   g_debug ("Delivery %u, exchange %.*s routingkey %.*s",
@@ -193,26 +222,33 @@ _amqp_get_response (const amqp_connection_state_t conn,
 
   response_body =
       g_strndup (envelope.message.body.bytes, envelope.message.body.len);
+
   amqp_destroy_envelope (&envelope);
 
+out:
   return response_body;
 }
 
 
-static gchar *
+static ChamgeReturn
 _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
-    const gchar * request, const gchar * exchange, const gchar * queue_name)
+    const gchar * request, const gchar * exchange, const gchar * queue_name,
+    gchar ** response_body, GError ** error)
 {
-  amqp_bytes_t amqp_reply_queue;
+  amqp_bytes_t amqp_reply_queue = { 0 };
   amqp_basic_properties_t amqp_props = { 0 };
-  gchar *response_body = NULL;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
 
-  g_return_val_if_fail (queue_name != NULL, NULL);
+  g_return_val_if_fail (amqp_conn != NULL, CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (channel != 0, CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (queue_name != NULL, CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (request != NULL, CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (response_body != NULL, CHAMGE_RETURN_FAIL);
 
   /* create private replay_to_queue and queue name is random that is supplied from amqp server */
   if (_amqp_declare_queue (amqp_conn, NULL,
-          &amqp_reply_queue) != CHAMGE_RETURN_OK)
-    return NULL;
+          &amqp_reply_queue, error) != CHAMGE_RETURN_OK)
+    return ret;
 
   g_debug ("declare a queue for reply : %s", (gchar *) amqp_reply_queue.bytes);
 
@@ -237,7 +273,9 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
         amqp_cstring_bytes (queue_name), 0, 0, &amqp_props,
         amqp_cstring_bytes (request));
     if (r < 0) {
-      g_error ("publish can not be done >> %s", amqp_error_string2 (r));
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "publish failure >> %s",
+          amqp_error_string2 (r));
       goto out;
     }
     g_debug ("published to queue[%s], exchange[%s], request[%s]", queue_name,
@@ -245,13 +283,41 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
   }
 
   /* wait an answer */
-  response_body = _amqp_get_response (amqp_conn, amqp_reply_queue);
+  *response_body = _amqp_get_response (amqp_conn, amqp_reply_queue, error);
+  ret = CHAMGE_RETURN_OK;
 
 out:
   amqp_bytes_free (amqp_reply_queue);
-  return response_body;
+  return ret;
 }
 
+static ChamgeReturn
+_validate_response (const gchar * response, const gchar * shouldbe)
+{
+  g_autoptr (JsonParser) parser = json_parser_new ();
+  g_autoptr (GError) error = NULL;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+
+  JsonNode *root = NULL;
+  JsonObject *json_object = NULL;
+
+  if (!json_parser_load_from_data (parser, response, strlen (response), &error)) {
+    g_debug ("failed to parse body: %s", error->message);
+    return ret;
+  }
+
+  root = json_parser_get_root (parser);
+  json_object = json_node_get_object (root);
+  if (json_object_has_member (json_object, "result")) {
+    JsonNode *node = json_object_get_member (json_object, "result");
+    const gchar *result = json_node_get_string (node);
+    if (!g_strcmp0 (result, shouldbe)) {
+      ret = CHAMGE_RETURN_OK;
+    }
+  }
+
+  return ret;
+}
 
 static ChamgeReturn
 chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
@@ -261,6 +327,7 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
   g_autofree gchar *amqp_exchange_name = NULL;
   g_autofree gchar *response_body = NULL;
   g_autofree gchar *request_body = NULL;
+  g_autoptr (GError) error = NULL;
   gint amqp_channel = 1;
 
   g_autofree gchar *edge_id = NULL;
@@ -291,8 +358,9 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
       g_settings_get_string (self->settings, "enroll-exchange-name");
 
   if (_amqp_rpc_login (self->amqp_conn, self->amqp_socket,
-          amqp_uri, amqp_channel) != CHAMGE_RETURN_OK) {
-    g_debug ("failed to amqp login");
+          amqp_uri, amqp_channel, &error) != CHAMGE_RETURN_OK) {
+    if (error->code >= CHAMGE_BACKEND_ERROR_OPERATION_FAILURE);
+    g_debug ("amqp_login ERROR : %s", error->message);
     goto out;
   }
 
@@ -301,10 +369,18 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
    */
   request_body =
       g_strdup_printf ("{\"method\":\"enroll\",\"edge-id\":\"%s\"}", edge_id);
-  response_body =
-      _amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
-      amqp_exchange_name, amqp_enroll_q_name);
+  if (_amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
+          amqp_exchange_name, amqp_enroll_q_name, &response_body,
+          &error) != CHAMGE_RETURN_OK) {
+    if (error->code >= CHAMGE_BACKEND_ERROR_OPERATION_FAILURE)
+      g_debug ("rpc request ERROR : %s", error->message);
+    goto out;
+  }
   g_debug ("received response to enroll : %s", response_body);
+  if (_validate_response (response_body, "enrolled") != CHAMGE_RETURN_OK) {
+    g_debug ("  received reponse must be [enrolled] but [%s]", response_body);
+    goto out;
+  }
   ret = CHAMGE_RETURN_OK;
 
 out:
