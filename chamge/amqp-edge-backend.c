@@ -180,56 +180,6 @@ _amqp_declare_queue (const amqp_connection_state_t conn,
   return CHAMGE_RETURN_OK;
 }
 
-static gchar *
-_amqp_get_response (const amqp_connection_state_t conn,
-    const amqp_bytes_t reply_to_queue, GError ** error)
-{
-  amqp_rpc_reply_t amqp_r;
-  amqp_envelope_t envelope;
-  gchar *response_body = NULL;
-
-  if (amqp_basic_consume (conn, 1, reply_to_queue, amqp_empty_bytes, 0,
-          1, 0, amqp_empty_table) == NULL) {
-    g_set_error (error, CHAMGE_BACKEND_ERROR,
-        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "basic consume failure >> %s",
-        _amqp_rpc_reply_string (amqp_get_rpc_reply (conn)));
-    goto out;
-  }
-
-  amqp_maybe_release_buffers (conn);
-
-  g_debug ("Wait for response message from [%s]",
-      (gchar *) reply_to_queue.bytes);
-  amqp_r = amqp_consume_message (conn, &envelope, NULL, 0);
-
-  if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
-    g_set_error (error, CHAMGE_BACKEND_ERROR,
-        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "consume msg failure >> %s",
-        _amqp_rpc_reply_string (amqp_r));
-    goto out;
-  }
-
-  g_debug ("Delivery %u, exchange %.*s routingkey %.*s",
-      (unsigned) envelope.delivery_tag, (int) envelope.exchange.len,
-      (char *) envelope.exchange.bytes, (int) envelope.routing_key.len,
-      (char *) envelope.routing_key.bytes);
-
-  if (envelope.message.properties._flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
-    g_debug ("Content-type: %.*s",
-        (int) envelope.message.properties.content_type.len,
-        (char *) envelope.message.properties.content_type.bytes);
-  }
-
-  response_body =
-      g_strndup (envelope.message.body.bytes, envelope.message.body.len);
-
-  amqp_destroy_envelope (&envelope);
-
-out:
-  return response_body;
-}
-
-
 static ChamgeReturn
 _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
     const gchar * request, const gchar * exchange, const gchar * queue_name,
@@ -237,6 +187,8 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
 {
   amqp_bytes_t amqp_reply_queue = { 0 };
   amqp_basic_properties_t amqp_props = { 0 };
+  g_autofree gchar *correlation_id = NULL;
+  guint retry_count = 0;
   ChamgeReturn ret = CHAMGE_RETURN_FAIL;
 
   g_return_val_if_fail (amqp_conn != NULL, CHAMGE_RETURN_FAIL);
@@ -263,7 +215,11 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
   amqp_props.reply_to = amqp_reply_queue;
 
   amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
-  amqp_props.correlation_id = amqp_cstring_bytes ("1");
+  correlation_id = g_uuid_string_random ();
+  correlation_id =
+      g_compute_checksum_for_string (G_CHECKSUM_SHA256, correlation_id,
+      strlen (correlation_id));
+  amqp_props.correlation_id = amqp_cstring_bytes (correlation_id);
 
   /* send requst to queue_name */
   {
@@ -282,8 +238,87 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
         exchange, request);
   }
 
+  if (amqp_basic_consume (amqp_conn, 1, amqp_reply_queue, amqp_empty_bytes, 0,
+          1, 0, amqp_empty_table) == NULL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "basic consume failure >> %s",
+        _amqp_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
+    goto out;
+  }
+
+
   /* wait an answer */
-  *response_body = _amqp_get_response (amqp_conn, amqp_reply_queue, error);
+  do {
+    amqp_rpc_reply_t amqp_r;
+    amqp_envelope_t envelope;
+    struct timeval timeout = { 10, 0 };
+
+    if (retry_count > 10) {
+      g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+          "no response to the request in 10 messages");
+      break;
+    }
+    amqp_maybe_release_buffers (amqp_conn);
+
+    g_debug ("Wait for response message from [%s]",
+        (gchar *) amqp_reply_queue.bytes);
+    amqp_r = amqp_consume_message (amqp_conn, &envelope, &timeout, 0);
+    retry_count++;
+
+    if (amqp_r.reply_type == AMQP_RESPONSE_LIBRARY_EXCEPTION
+        && amqp_r.library_error == AMQP_STATUS_TIMEOUT) {
+      g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "consume msg timeout");
+      break;
+    }
+
+    if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "consume msg failure >> %s",
+          _amqp_rpc_reply_string (amqp_r));
+      break;
+    }
+
+    g_debug ("Delivery %u, exchange %.*s routingkey %.*s",
+        (unsigned) envelope.delivery_tag, (int) envelope.exchange.len,
+        (char *) envelope.exchange.bytes, (int) envelope.routing_key.len,
+        (char *) envelope.routing_key.bytes);
+
+    if ((envelope.message.properties._flags & AMQP_BASIC_CORRELATION_ID_FLAG) ==
+        0) {
+      g_debug ("discard >> correaltion id is not exist");
+      continue;
+    }
+
+    if (strncmp (correlation_id,
+            envelope.message.properties.correlation_id.bytes,
+            envelope.message.properties.correlation_id.len) != 0) {
+      g_debug ("discard >> correaltion id is not matched [%s] [%.*s]",
+          correlation_id, (gint) envelope.message.properties.correlation_id.len,
+          (gchar *) envelope.message.properties.correlation_id.bytes);
+      continue;
+    }
+
+    g_debug ("Correlation ID : %.*s",
+        (gint) envelope.message.properties.correlation_id.len,
+        (gchar *) envelope.message.properties.correlation_id.bytes);
+    if (envelope.message.properties._flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
+      g_debug ("Content-type: %.*s",
+          (int) envelope.message.properties.content_type.len,
+          (char *) envelope.message.properties.content_type.bytes);
+    }
+
+    if (*response_body != NULL) {
+      g_free (*response_body);
+      *response_body = NULL;
+    }
+    *response_body =
+        g_strndup (envelope.message.body.bytes, envelope.message.body.len);
+
+    amqp_destroy_envelope (&envelope);
+    break;
+  } while (1);
   ret = CHAMGE_RETURN_OK;
 
 out:
