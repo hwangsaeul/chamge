@@ -30,6 +30,10 @@ struct _ChamgeArbiterBackendClass
 
   ChamgeReturn  (* activate)                    (ChamgeArbiterBackend  *self);
   ChamgeReturn  (* deactivate)                  (ChamgeArbiterBackend  *self);
+  ChamgeReturn  (* user_command)                (ChamgeArbiterBackend  *self,
+                                                 const gchar           *cmd,
+                                                 gchar                **out,
+                                                 GError               **error);
 
   void          (* approve)                     (ChamgeArbiterBackend  *self,
                                                  const gchar           *edge_id);
@@ -57,6 +61,12 @@ ChamgeReturn    chamge_arbiter_backend_activate (ChamgeArbiterBackend  *self);
 
 ChamgeReturn    chamge_arbiter_backend_deactivate
                                                 (ChamgeArbiterBackend  *self);
+
+ChamgeReturn    chamge_arbiter_backend_user_command
+                                                (ChamgeArbiterBackend  *self,
+                                                 const gchar           *cmd,
+                                                 gchar                **out,
+                                                 GError               **error);
 
 void    chamge_arbiter_backend_approve          (ChamgeArbiterBackend  *self,
                                                  const gchar           *edge_id);

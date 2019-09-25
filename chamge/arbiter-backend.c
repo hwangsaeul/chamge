@@ -206,6 +206,20 @@ chamge_arbiter_backend_deactivate (ChamgeArbiterBackend * self)
   return ret;
 }
 
+ChamgeReturn
+chamge_arbiter_backend_user_command (ChamgeArbiterBackend * self,
+    const gchar * cmd, gchar ** out, GError ** error)
+{
+  ChamgeArbiterBackendClass *klass;
+  g_return_val_if_fail (CHAMGE_IS_ARBITER_BACKEND (self), CHAMGE_RETURN_FAIL);
+
+  klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+  g_return_val_if_fail (klass->user_command != NULL, CHAMGE_RETURN_FAIL);
+
+  return klass->user_command (self, cmd, out, error);
+}
+
+
 void
 chamge_arbiter_backend_approve (ChamgeArbiterBackend * self,
     const gchar * edge_id)

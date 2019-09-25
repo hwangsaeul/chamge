@@ -118,6 +118,16 @@ chamge_arbiter_deactivate (ChamgeNode * node)
   return ret;
 }
 
+static ChamgeReturn
+chamge_arbiter_user_command (ChamgeNode * node, const gchar * cmd, gchar ** out,
+    GError ** error)
+{
+  ChamgeArbiter *self = CHAMGE_ARBITER (node);
+  ChamgeArbiterPrivate *priv = chamge_arbiter_get_instance_private (self);
+
+  return chamge_arbiter_backend_user_command (priv->arbiter_backend, cmd, out,
+      error);
+}
 
 static void
 chamge_arbiter_dispose (GObject * object)
@@ -150,6 +160,8 @@ chamge_arbiter_class_init (ChamgeArbiterClass * klass)
   node_class->delist = chamge_arbiter_delist;
   node_class->activate = chamge_arbiter_activate;
   node_class->deactivate = chamge_arbiter_deactivate;
+  node_class->user_command = chamge_arbiter_user_command;
+
 }
 
 static void
