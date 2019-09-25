@@ -78,12 +78,41 @@ chamge_arbiter_backend_edge_enrolled (ChamgeArbiterBackend * self,
     const gchar * edge_id)
 {
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+  ChamgeArbiterBackendPrivate *priv =
+      chamge_arbiter_backend_get_instance_private (self);
 
   g_return_if_fail (klass->approve != NULL);
 
-  /* TODO: fire event to application */
   klass->approve (self, edge_id);
+  if (priv->edge_enrolled) {
+    GValue values[2] = { G_VALUE_INIT };
+    g_value_init (&values[0], G_TYPE_STRING);
+    g_value_set_string (&values[0], edge_id);
+    g_value_init (&values[1], CHAMGE_TYPE_ARBITER_BACKEND);
+    g_value_set_object (&values[1], self);
+
+    g_closure_invoke (priv->edge_enrolled, NULL, 2, values, NULL);
+  }
 }
+
+static void
+chamge_arbiter_backend_edge_delisted (ChamgeArbiterBackend * self,
+    const gchar * edge_id)
+{
+  ChamgeArbiterBackendPrivate *priv =
+      chamge_arbiter_backend_get_instance_private (self);
+
+  if (priv->edge_delisted) {
+    GValue values[2] = { G_VALUE_INIT };
+    g_value_init (&values[0], G_TYPE_STRING);
+    g_value_set_string (&values[0], edge_id);
+    g_value_init (&values[1], CHAMGE_TYPE_ARBITER_BACKEND);
+    g_value_set_object (&values[1], self);
+
+    g_closure_invoke (priv->edge_delisted, NULL, 2, values, NULL);
+  }
+}
+
 
 static void
 chamge_arbiter_backend_dispose (GObject * object)
@@ -118,6 +147,7 @@ chamge_arbiter_backend_class_init (ChamgeArbiterBackendClass * klass)
       properties);
 
   klass->edge_enrolled = chamge_arbiter_backend_edge_enrolled;
+  klass->edge_delisted = chamge_arbiter_backend_edge_delisted;
 }
 
 static void
@@ -243,6 +273,10 @@ chamge_arbiter_backend_set_edge_handler (ChamgeArbiterBackend * self,
       chamge_arbiter_backend_get_instance_private (self);
 
   g_return_if_fail (CHAMGE_IS_ARBITER_BACKEND (self));
+
+  g_clear_pointer (&priv->edge_enrolled, g_closure_unref);
+  g_clear_pointer (&priv->edge_delisted, g_closure_unref);
+  g_clear_pointer (&priv->edge_connection_requested, g_closure_unref);
 
   if (edge_enrolled != NULL) {
     priv->edge_enrolled =

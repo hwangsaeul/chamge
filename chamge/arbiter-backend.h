@@ -40,6 +40,8 @@ struct _ChamgeArbiterBackendClass
 
   void          (* edge_enrolled)               (ChamgeArbiterBackend  *self,
                                                  const gchar           *edge_id);
+  void          (* edge_delisted)               (ChamgeArbiterBackend  *self,
+                                                 const gchar           *edge_id);
 };
 
 typedef void (*ChamgeArbiterBackendEdgeEnrolled)        (const gchar           *edge_id, 

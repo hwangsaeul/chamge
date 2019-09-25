@@ -30,6 +30,8 @@ struct _ChamgeArbiterClass
   /* signals */
   void  (* enrolled)                    (ChamgeArbiter *self,
                                          const gchar   *uid);
+  void  (* delisted)                    (ChamgeArbiter *self,
+                                         const gchar   *uid);
 };
 
 CHAMGE_API_EXPORT
