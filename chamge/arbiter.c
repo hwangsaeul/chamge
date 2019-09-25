@@ -24,7 +24,16 @@ typedef enum
   PROP_LAST = PROP_BACKEND
 } _ChamgeArbiterProperty;
 
+typedef enum
+{
+  SIG_EDGE_ENROLLED,
+  SIG_EDGE_DELISTED,
+
+  LAST_SIGNAL
+};
+
 static GParamSpec *properties[PROP_LAST + 1];
+static guint signals[LAST_SIGNAL] = { 0 };
 
 /* *INDENT-OFF* */
 G_DEFINE_TYPE_WITH_PRIVATE (ChamgeArbiter, chamge_arbiter, CHAMGE_TYPE_NODE)
@@ -65,6 +74,29 @@ chamge_arbiter_set_property (GObject * object,
   }
 }
 
+
+static void
+chamge_arbiter_enrolled_cb (const gchar * uid, ChamgeArbiterBackend * self)
+{
+  ChamgeArbiter *arbiter = NULL;
+
+  g_object_get (self, "arbiter", &arbiter, NULL);
+  g_assert (arbiter != NULL);
+
+  g_signal_emit (arbiter, signals[SIG_EDGE_ENROLLED], 0, uid);
+}
+
+static void
+chamge_arbiter_delisted_cb (const gchar * uid, ChamgeArbiterBackend * self)
+{
+  ChamgeArbiter *arbiter = NULL;
+
+  g_object_get (self, "arbiter", &arbiter, NULL);
+  g_assert (arbiter != NULL);
+
+  g_signal_emit (arbiter, signals[SIG_EDGE_DELISTED], 0, uid);
+}
+
 static ChamgeReturn
 chamge_arbiter_enroll (ChamgeNode * node)
 {
@@ -75,6 +107,8 @@ chamge_arbiter_enroll (ChamgeNode * node)
   if (priv->arbiter_backend == NULL)
     priv->arbiter_backend = chamge_arbiter_backend_new (self);
 
+  chamge_arbiter_backend_set_edge_handler (priv->arbiter_backend,
+      chamge_arbiter_enrolled_cb, chamge_arbiter_delisted_cb, NULL);
   ret = chamge_arbiter_backend_enroll (priv->arbiter_backend);
 
   return ret;
@@ -155,6 +189,16 @@ chamge_arbiter_class_init (ChamgeArbiterClass * klass)
 
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
+
+  signals[SIG_EDGE_ENROLLED] =
+      g_signal_new ("enrolled", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, enrolled), NULL,
+      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
+
+  signals[SIG_EDGE_DELISTED] =
+      g_signal_new ("delisted", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, delisted), NULL,
+      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
 
   node_class->enroll = chamge_arbiter_enroll;
   node_class->delist = chamge_arbiter_delist;

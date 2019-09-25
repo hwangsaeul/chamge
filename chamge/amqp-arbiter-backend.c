@@ -139,32 +139,27 @@ chamge_amqp_arbiter_backend_delist (ChamgeArbiterBackend * arbiter_backend)
   return CHAMGE_RETURN_OK;
 }
 
-static gchar *
-_handle_edge_enroll (ChamgeAmqpArbiterBackend * self, JsonNode * root)
+static void
+_handle_edge_enroll (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
 {
-  JsonObject *json_object = NULL;
-  const gchar *edge_id = NULL;
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
-  gchar *response = NULL;
 
-  /* TODO: validate json value */
-
-  json_object = json_node_get_object (root);
-  if (json_object_has_member (json_object, "edge-id")) {
-    JsonNode *node = json_object_get_member (json_object, "edge-id");
-    edge_id = json_node_get_string (node);
-  }
-
-  /* TODO: body need to be filled with real data */
-  if (edge_id != NULL) {
-    klass->edge_enrolled (CHAMGE_ARBITER_BACKEND (self), edge_id);
-    response = g_strdup ("{\"result\":\"enrolled\"}");
-  } else {
-    response = g_strdup ("{\"result\":\"edge_id does not exist\"}");
-  }
-  return response;
+  klass->edge_enrolled (CHAMGE_ARBITER_BACKEND (self), edge_id);
 }
 
+static void
+_handle_edge_activate (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
+{
+  /* TODO : check whether manager need to handle activate request of edge */
+}
+
+static void
+_handle_edge_deactivate (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
+{
+  ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+
+  klass->edge_delisted (CHAMGE_ARBITER_BACKEND (self), edge_id);
+}
 
 
 static gchar *
@@ -173,15 +168,13 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
 {
   g_autoptr (JsonParser) parser = json_parser_new ();
   g_autoptr (GError) error = NULL;
-  gchar *response = NULL;
 
   JsonNode *root = NULL;
   JsonObject *json_object = NULL;
 
   if (!json_parser_load_from_data (parser, body, len, &error)) {
     g_debug ("failed to parse body: %s", error->message);
-    response = g_strdup_printf ("{\"result\":\"failed to parse body\"}");
-    return response;
+    return g_strdup_printf ("{\"result\":\"failed to parse body\"}");
   }
 
   root = json_parser_get_root (parser);
@@ -189,14 +182,35 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
   if (json_object_has_member (json_object, "method")) {
     JsonNode *node = json_object_get_member (json_object, "method");
     const gchar *method = json_node_get_string (node);
+    const gchar *edge_id = NULL;
+    gchar *response = NULL;
+
+    if (json_object_has_member (json_object, "edgeId")) {
+      node = json_object_get_member (json_object, "edgeId");
+      edge_id = json_node_get_string (node);
+      if (edge_id == NULL)
+        return g_strdup ("{\"result\":\"edge_id does not exist\"}");
+    }
     g_debug ("method: %s", method);
 
     if (!g_strcmp0 (method, "enroll")) {
-      response = _handle_edge_enroll (self, root);
+      _handle_edge_enroll (self, edge_id);
+      response = g_strdup ("{\"result\":\"enrolled\"}");
+    } else if (!g_strcmp0 (method, "activate")) {
+      _handle_edge_activate (self, edge_id);
+      response = g_strdup ("{\"result\":\"activated\"}");
+    } else if (!g_strcmp0 (method, "deactdivate")) {
+      _handle_edge_deactivate (self, edge_id);
+      response = g_strdup ("{\"result\":\"deactivated\"}");
+    } else {
+      response =
+          g_strdup_printf ("{\"result\":\"method(%s) is not supported\"}",
+          method);
     }
+    return response;
   }
 
-  return response;
+  return g_strdup ("{\"result\":\"method does not exist\"}");
 }
 
 static gboolean
