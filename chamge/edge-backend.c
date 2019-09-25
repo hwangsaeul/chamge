@@ -18,6 +18,8 @@
 typedef struct
 {
   ChamgeEdge *edge;
+
+  GClosure *user_command;
 } ChamgeEdgeBackendPrivate;
 
 typedef enum
@@ -70,6 +72,32 @@ chamge_edge_backend_set_property (GObject * object,
   }
 }
 
+static ChamgeReturn
+chamge_edge_backend_user_command (ChamgeEdgeBackend * self,
+    const gchar * cmd, gchar ** response, GError ** error)
+{
+  ChamgeEdgeBackendPrivate *priv =
+      chamge_edge_backend_get_instance_private (self);
+  ChamgeReturn ret = CHAMGE_RETURN_OK;
+
+  if (priv->user_command != NULL) {
+    GValue in_values[3] = { G_VALUE_INIT };
+    GValue out_value = G_VALUE_INIT;
+    g_value_init (&in_values[0], G_TYPE_STRING);
+    g_value_set_string (&in_values[0], cmd);
+    g_value_init (&in_values[1], G_TYPE_POINTER);
+    g_value_set_pointer (&in_values[1], response);
+    g_value_init (&in_values[2], G_TYPE_POINTER);
+    g_value_set_pointer (&in_values[2], error);
+
+    g_value_init (&out_value, G_TYPE_INT);
+    g_closure_invoke (priv->user_command, &out_value, 3, in_values, NULL);
+    ret = g_value_get_int (&out_value);
+  }
+
+  return ret;
+}
+
 static void
 chamge_edge_backend_dispose (GObject * object)
 {
@@ -78,6 +106,8 @@ chamge_edge_backend_dispose (GObject * object)
       chamge_edge_backend_get_instance_private (self);
 
   g_clear_object (&priv->edge);
+
+  g_clear_pointer (&priv->user_command, g_closure_unref);
 
   G_OBJECT_CLASS (chamge_edge_backend_parent_class)->dispose (object);
 }
@@ -97,6 +127,8 @@ chamge_edge_backend_class_init (ChamgeEdgeBackendClass * klass)
 
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
+
+  klass->user_command = chamge_edge_backend_user_command;
 }
 
 static void
@@ -198,4 +230,24 @@ gchar *chamge_edge_backend_request_target_uri
   target_uri = klass->request_target_uri (self, error);
 
   return g_steal_pointer (&target_uri);
+}
+
+void
+chamge_edge_backend_set_user_command_handler (ChamgeEdgeBackend * self,
+    ChamgeEdgeBackendUserCommand user_command)
+{
+  ChamgeEdgeBackendPrivate *priv =
+      chamge_edge_backend_get_instance_private (self);
+
+  g_return_if_fail (CHAMGE_IS_EDGE_BACKEND (self));
+
+  if (priv->user_command != NULL) {
+    g_debug ("streaming handlers are already set, it will be reset");
+  }
+  g_clear_pointer (&priv->user_command, g_closure_unref);
+
+  if (user_command != NULL) {
+    priv->user_command = g_cclosure_new (G_CALLBACK (user_command), self, NULL);
+    g_closure_set_marshal (priv->user_command, g_cclosure_marshal_generic);
+  }
 }

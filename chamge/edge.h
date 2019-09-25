@@ -25,6 +25,13 @@ struct _ChamgeEdgeClass
   
   /* methods */
   gchar* (* request_target_uri)         (ChamgeEdge *self, GError **error);
+
+
+  /* signals */
+  void (*user_command)                  (ChamgeEdge    *self,
+                                         const gchar   *cmd,
+                                         gchar        **response,
+                                         GError       **error);
 };
 
 CHAMGE_API_EXPORT
