@@ -32,7 +32,16 @@ struct _ChamgeEdgeBackendClass
 
   gchar*        (* request_target_uri)          (ChamgeEdgeBackend     *self,
                                                  GError               **error);
+
+  ChamgeReturn  (* user_command)               (ChamgeEdgeBackend     *self,
+                                                 const gchar           *cmd,
+                                                 gchar                **response,
+                                                 GError               **error);
 };
+typedef ChamgeReturn (*ChamgeEdgeBackendUserCommand)    (const gchar          *cmd,
+                                                         gchar               **response,
+                                                         GError              **error,
+                                                         ChamgeEdgeBackend     *edge_backend);
 
 ChamgeEdgeBackend      *chamge_edge_backend_new         (ChamgeEdge            *edge);
 
@@ -47,6 +56,10 @@ ChamgeReturn            chamge_edge_backend_deactivate  (ChamgeEdgeBackend     *
 gchar                  *chamge_edge_backend_request_target_uri
                                                         (ChamgeEdgeBackend     *self,
                                                          GError               **error);
+
+void  chamge_edge_backend_set_user_command_handler      (ChamgeEdgeBackend     *self,
+                                                         ChamgeEdgeBackendUserCommand
+                                                                                user_command);
 
 G_END_DECLS
 

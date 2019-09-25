@@ -27,7 +27,15 @@ typedef enum
   PROP_LAST = PROP_BACKEND
 } _ChamgeEdgeProperty;
 
+typedef enum
+{
+  SIG_USER_COMMAND,
+
+  LAST_SIGNAL
+};
+
 static GParamSpec *properties[PROP_LAST + 1];
+static guint signals[LAST_SIGNAL] = { 0 };
 
 /* *INDENT-OFF* */
 G_DEFINE_TYPE_WITH_CODE (ChamgeEdge, chamge_edge, CHAMGE_TYPE_NODE,
@@ -46,6 +54,23 @@ chamge_edge_request_target_uri_default (ChamgeEdge * self, GError ** error)
   return g_steal_pointer (&target_uri);
 }
 
+
+static ChamgeReturn
+chamge_edge_user_command_cb (const gchar * cmd, gchar ** response,
+    GError ** error, ChamgeEdgeBackend * self)
+{
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  ChamgeEdge *edge = NULL;
+
+  g_object_get (self, "edge", &edge, NULL);
+  g_assert (edge != NULL);
+
+  g_signal_emit (edge, signals[SIG_USER_COMMAND], 0, cmd, response, error,
+      &ret);
+
+  return ret;
+}
+
 static ChamgeReturn
 chamge_edge_enroll (ChamgeNode * node)
 {
@@ -56,6 +81,8 @@ chamge_edge_enroll (ChamgeNode * node)
   if (priv->edge_backend == NULL)
     priv->edge_backend = chamge_edge_backend_new (self);
 
+  chamge_edge_backend_set_user_command_handler (priv->edge_backend,
+      chamge_edge_user_command_cb);
   ret = chamge_edge_backend_enroll (priv->edge_backend);
 
   return ret;
@@ -160,6 +187,12 @@ chamge_edge_class_init (ChamgeEdgeClass * klass)
 
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
+
+  signals[SIG_USER_COMMAND] =
+      g_signal_new ("user-command", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeEdgeClass, user_command), NULL,
+      NULL, g_cclosure_marshal_generic, G_TYPE_INT, 3,
+      G_TYPE_STRING, G_TYPE_POINTER, G_TYPE_POINTER);
 
   node_class->enroll = chamge_edge_enroll;
   node_class->delist = chamge_edge_delist;
