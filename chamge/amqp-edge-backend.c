@@ -444,7 +444,7 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
 
   if (_amqp_rpc_login (self->amqp_conn, self->amqp_socket,
           amqp_uri, amqp_channel, &error) != CHAMGE_RETURN_OK) {
-    if (error->code >= CHAMGE_BACKEND_ERROR_INVALID_PARAMETER)
+    if (error != NULL)
       g_debug ("amqp_login ERROR : %s", error->message);
     goto out;
   }
@@ -457,7 +457,7 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
   if (_amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
           amqp_exchange_name, amqp_enroll_q_name, &response_body,
           &error) != CHAMGE_RETURN_OK) {
-    if (error->code >= CHAMGE_BACKEND_ERROR_INVALID_PARAMETER)
+    if (error != NULL)
       g_debug ("rpc request ERROR : %s", error->message);
     goto out;
   }
