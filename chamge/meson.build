@@ -36,12 +36,12 @@ chamge_c_args = [
   '-DCHAMGE_COMPILATION',
 ]
 
-chamge_enums = gnome.mkenums_simple(
-  'enumtypes',
-  header_prefix: '#include <chamge/types.h>',
+chamge_enums = gnome.mkenums(
+  'enumtypes.h',
+  h_template: 'enumtypes.h.template',
+  c_template: 'enumtypes.c.template',
   sources: source_h,
-  decorator: 'CHAMGE_API_EXPORT',
-  install_dir: chamge_install_header_subdir,
+  install_dir: join_paths(get_option('includedir'), chamge_install_header_subdir),
   install_header: true,
 )
 
