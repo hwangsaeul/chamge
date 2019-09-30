@@ -1,7 +1,7 @@
 project('chamge', 'c',
   version: '0.9.0',
   license: 'Apache-2.0',
-  meson_version: '>= 0.51',
+  meson_version: '>= 0.40',
   default_options: [ 'warning_level=1',
                      'buildtype=debugoptimized' ])
 
@@ -59,4 +59,8 @@ subdir('chamge')
 subdir('agent')
 subdir('tests')
 
-run_command(python3, '-c', 'import shutil; shutil.copy("hooks/pre-commit.hook", ".git/hooks/pre-commit")')
+if meson.version().version_compare('>= 0.46.0')
+  python3 = import('python').find_installation()
+  run_command(python3, '-c',
+    'import shutil; shutil.copy("hooks/pre-commit.hook", ".git/hooks/pre-commit")')
+endif
