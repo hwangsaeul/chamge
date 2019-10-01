@@ -1,0 +1,28 @@
+Source: chamge
+Priority: optional
+Maintainer: Jeongseok Kim <jeongseok.kim@sk.com>
+Build-Depends: debhelper (>= 10~),
+  meson,
+  libglib2.0-dev,
+  libjson-glib-dev,
+  librabbitmq-dev,
+Standards-Version: 4.2.1
+Section: libs
+Homepage: https://github.com/hwangsaeul/chamge
+Vcs-Browser: https://github.com/hwangsaeul/chamge
+Vcs-Git: https://github.com/hwangsaeul/chamge.git
+
+Package: chamge
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Connection Broker API
+ Chamge is a connection broker API for SRT streaming service.
+
+Package: chamge-dev
+Section: devel
+Architecture: any
+Depends: chamge (= ${binary:Version}), ${misc:Depends}
+Description: Connection Broker API
+ Chamge is a connection broker API for SRT streaming service.
+ .
+ This package contains development files for chamge.
