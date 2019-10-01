@@ -49,7 +49,6 @@ rabbitmq_dep = dependency('librabbitmq', version: '>= 0.9.0')
 json_glib_dep = dependency ('json-glib-1.0', version: '>= 1.4.0')
 
 gnome = import('gnome')
-python3 = import('python').find_installation()
 
 chamge_incs = include_directories('.', 'chamge')
 
