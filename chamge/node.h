@@ -54,7 +54,6 @@ struct _ChamgeNodeClass
   ChamgeReturn (* deactivate)           (ChamgeNode *self);
 
   gchar *      (* get_uid)              (ChamgeNode *self);
-  ChamgeReturn (* user_command)         (ChamgeNode *self, const gchar* cmd, gchar **out, GError ** error);
 };
 
 CHAMGE_API_EXPORT
@@ -69,11 +68,7 @@ ChamgeReturn chamge_node_activate       (ChamgeNode *self);
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_deactivate     (ChamgeNode *self);
 
-CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_get_uid        (ChamgeNode *self, gchar ** uid);
-
-CHAMGE_API_EXPORT
-ChamgeReturn chamge_node_user_command   (ChamgeNode *self, const gchar *cmd, gchar **out, GError ** error);
 
 G_END_DECLS
 

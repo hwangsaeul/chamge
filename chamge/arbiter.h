@@ -39,12 +39,17 @@ struct _ChamgeArbiterClass
   /* methods */
   void  (* approve)                     (ChamgeArbiter *self,
                                          const gchar   *uid);
+  ChamgeReturn (* user_command)         (ChamgeArbiter *self,
+                                         const gchar   *cmd,
+                                         char         **out,
+                                         GError       **error);
 
   /* signals */
   void  (* enrolled)                    (ChamgeArbiter *self,
                                          const gchar   *uid);
   void  (* delisted)                    (ChamgeArbiter *self,
                                          const gchar   *uid);
+
 };
 
 CHAMGE_API_EXPORT
@@ -53,6 +58,12 @@ ChamgeArbiter*  chamge_arbiter_new                      (const gchar   *uid);
 CHAMGE_API_EXPORT
 ChamgeArbiter*  chamge_arbiter_new_full                 (const gchar   *uid,
                                                          ChamgeBackend  bakend);
+
+CHAMGE_API_EXPORT
+ChamgeReturn chamge_arbiter_user_command                (ChamgeArbiter    *self,
+                                                         const gchar   *cmd,
+                                                         gchar        **out,
+                                                         GError       **error);
 
 G_END_DECLS
 

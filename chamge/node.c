@@ -89,13 +89,6 @@ chamge_node_get_uid_default (ChamgeNode * self)
   return g_strdup (priv->uid);
 }
 
-static ChamgeReturn
-chamge_node_user_command_default (ChamgeNode * self, const gchar * user_data,
-    gchar ** out, GError ** error)
-{
-  return CHAMGE_RETURN_OK;
-}
-
 static void
 chamge_node_dispose (GObject * object)
 {
@@ -365,21 +358,4 @@ chamge_node_get_uid (ChamgeNode * self, gchar ** uid)
     ret = CHAMGE_RETURN_FAIL;
 
   return ret;
-}
-
-ChamgeReturn
-chamge_node_user_command (ChamgeNode * self, const gchar * cmd, gchar ** out,
-    GError ** error)
-{
-  ChamgeNodeClass *klass;
-  ChamgeReturn ret = CHAMGE_RETURN_OK;
-  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
-  g_autoptr (GMutexLocker) locker = NULL;
-
-  g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
-
-  klass = CHAMGE_NODE_GET_CLASS (self);
-  g_return_val_if_fail (klass->user_command != NULL, CHAMGE_RETURN_FAIL);
-
-  return klass->user_command (self, cmd, out, error);
 }

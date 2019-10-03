@@ -166,10 +166,9 @@ chamge_arbiter_deactivate (ChamgeNode * node)
 }
 
 static ChamgeReturn
-chamge_arbiter_user_command (ChamgeNode * node, const gchar * cmd, gchar ** out,
-    GError ** error)
+chamge_arbiter_user_command_default (ChamgeArbiter * self, const gchar * cmd,
+    gchar ** out, GError ** error)
 {
-  ChamgeArbiter *self = CHAMGE_ARBITER (node);
   ChamgeArbiterPrivate *priv = chamge_arbiter_get_instance_private (self);
 
   return chamge_arbiter_backend_user_command (priv->arbiter_backend, cmd, out,
@@ -205,19 +204,20 @@ chamge_arbiter_class_init (ChamgeArbiterClass * klass)
 
   signals[SIG_EDGE_ENROLLED] =
       g_signal_new ("enrolled", G_TYPE_FROM_CLASS (klass),
-      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, enrolled), NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, enrolled),
+      NULL, NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
 
   signals[SIG_EDGE_DELISTED] =
       g_signal_new ("delisted", G_TYPE_FROM_CLASS (klass),
-      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, delisted), NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, delisted),
+      NULL, NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
 
   node_class->enroll = chamge_arbiter_enroll;
   node_class->delist = chamge_arbiter_delist;
   node_class->activate = chamge_arbiter_activate;
   node_class->deactivate = chamge_arbiter_deactivate;
-  node_class->user_command = chamge_arbiter_user_command;
+
+  klass->user_command = chamge_arbiter_user_command_default;
 
 }
 
@@ -238,4 +238,27 @@ chamge_arbiter_new_full (const gchar * uid, ChamgeBackend backend)
   g_assert_nonnull (uid);
   return g_object_new (CHAMGE_TYPE_ARBITER, "uid", uid, "backend", backend,
       NULL);
+}
+
+ChamgeReturn
+chamge_arbiter_user_command (ChamgeArbiter * self, const gchar * cmd,
+    gchar ** out, GError ** error)
+{
+  ChamgeArbiterClass *klass;
+  ChamgeNodeState state;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+
+  g_return_val_if_fail (CHAMGE_IS_ARBITER (self), ret);
+  g_return_val_if_fail (error == NULL || *error == NULL, ret);
+
+  klass = CHAMGE_ARBITER_GET_CLASS (self);
+  g_return_val_if_fail (klass->user_command != NULL, ret);
+
+  g_object_get (self, "state", &state, NULL);
+
+  if (state == CHAMGE_NODE_STATE_ACTIVATED) {
+    ret = klass->user_command (self, cmd, out, error);
+  }
+
+  return ret;
 }
