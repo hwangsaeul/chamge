@@ -45,7 +45,14 @@ gio_dep = [dependency('gio-2.0', version: glib_req_version,
                   fallback: ['glib', 'libgio_dep'])]
 gobject_dep = dependency('gobject-2.0', version: glib_req_version,
     fallback: ['glib', 'libgobject_dep'])
-rabbitmq_dep = dependency('librabbitmq', version: '>= 0.7.0')
+
+# FIXME: old meson fails to get dependency if `pkg-config --cflags` returns zero
+if meson.version().version_compare('>= 0.46.0')
+  rabbitmq_dep = dependency('librabbitmq', version: '>= 0.7.0')
+else
+  rabbitmq_dep = declare_dependency(link_args: ['-lrabbitmq'])
+endif
+
 json_glib_dep = dependency ('json-glib-1.0', version: '>= 1.4.0')
 
 gnome = import('gnome')
