@@ -42,6 +42,8 @@ enum
   SIG_EDGE_ENROLLED,
   SIG_EDGE_DELISTED,
 
+  SIG_HUB_ENROLLED,
+  SIG_HUB_DELISTED,
   LAST_SIGNAL
 };
 
@@ -89,7 +91,7 @@ chamge_arbiter_set_property (GObject * object,
 
 
 static void
-chamge_arbiter_enrolled_cb (const gchar * uid, ChamgeArbiterBackend * self)
+chamge_arbiter_edge_enrolled_cb (const gchar * uid, ChamgeArbiterBackend * self)
 {
   ChamgeArbiter *arbiter = NULL;
 
@@ -100,7 +102,7 @@ chamge_arbiter_enrolled_cb (const gchar * uid, ChamgeArbiterBackend * self)
 }
 
 static void
-chamge_arbiter_delisted_cb (const gchar * uid, ChamgeArbiterBackend * self)
+chamge_arbiter_edge_delisted_cb (const gchar * uid, ChamgeArbiterBackend * self)
 {
   ChamgeArbiter *arbiter = NULL;
 
@@ -109,6 +111,29 @@ chamge_arbiter_delisted_cb (const gchar * uid, ChamgeArbiterBackend * self)
 
   g_signal_emit (arbiter, signals[SIG_EDGE_DELISTED], 0, uid);
 }
+
+static void
+chamge_arbiter_hub_enrolled_cb (const gchar * uid, ChamgeArbiterBackend * self)
+{
+  ChamgeArbiter *arbiter = NULL;
+
+  g_object_get (self, "arbiter", &arbiter, NULL);
+  g_assert (arbiter != NULL);
+
+  g_signal_emit (arbiter, signals[SIG_HUB_ENROLLED], 0, uid);
+}
+
+static void
+chamge_arbiter_hub_delisted_cb (const gchar * uid, ChamgeArbiterBackend * self)
+{
+  ChamgeArbiter *arbiter = NULL;
+
+  g_object_get (self, "arbiter", &arbiter, NULL);
+  g_assert (arbiter != NULL);
+
+  g_signal_emit (arbiter, signals[SIG_HUB_DELISTED], 0, uid);
+}
+
 
 static ChamgeReturn
 chamge_arbiter_enroll (ChamgeNode * node)
@@ -121,7 +146,9 @@ chamge_arbiter_enroll (ChamgeNode * node)
     priv->arbiter_backend = chamge_arbiter_backend_new (self);
 
   chamge_arbiter_backend_set_edge_handler (priv->arbiter_backend,
-      chamge_arbiter_enrolled_cb, chamge_arbiter_delisted_cb, NULL);
+      chamge_arbiter_edge_enrolled_cb, chamge_arbiter_edge_delisted_cb, NULL);
+  chamge_arbiter_backend_set_hub_handler (priv->arbiter_backend,
+      chamge_arbiter_hub_enrolled_cb, chamge_arbiter_hub_delisted_cb);
   ret = chamge_arbiter_backend_enroll (priv->arbiter_backend);
 
   return ret;
@@ -204,14 +231,24 @@ chamge_arbiter_class_init (ChamgeArbiterClass * klass)
       properties);
 
   signals[SIG_EDGE_ENROLLED] =
-      g_signal_new ("enrolled", G_TYPE_FROM_CLASS (klass),
-      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, enrolled), NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
+      g_signal_new ("edge-enrolled", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, edge_enrolled),
+      NULL, NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
 
   signals[SIG_EDGE_DELISTED] =
-      g_signal_new ("delisted", G_TYPE_FROM_CLASS (klass),
-      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, delisted), NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
+      g_signal_new ("edge-delisted", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, edge_delisted),
+      NULL, NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
+
+  signals[SIG_HUB_ENROLLED] =
+      g_signal_new ("hub-enrolled", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, hub_enrolled),
+      NULL, NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
+
+  signals[SIG_HUB_DELISTED] =
+      g_signal_new ("hub-delisted", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeArbiterClass, hub_delisted),
+      NULL, NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, G_TYPE_STRING);
 
   node_class->enroll = chamge_arbiter_enroll;
   node_class->delist = chamge_arbiter_delist;

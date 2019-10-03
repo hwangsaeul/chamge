@@ -1,5 +1,6 @@
 tests = [
   'test-edge',
+  'test-hub',
   'test-arbiter',
 ]
 

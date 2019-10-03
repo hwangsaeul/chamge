@@ -16,18 +16,16 @@
  *
  */
 
-#ifndef __CHAMGE_H__
-#define __CHAMGE_H__
+#ifndef __CHAMGE_MOCK_HUB_BACKEND_H__
+#define __CHAMGE_MOCK_HUB_BACKEND_H__
 
-#define __CHAMGE_INSIDE__
+#include <chamge/hub-backend.h>
 
-#include <chamge/types.h>
-#include <chamge/enumtypes.h>
-#include <chamge/node.h>
-#include <chamge/edge.h>
-#include <chamge/hub.h>
-#include <chamge/arbiter.h>
+G_BEGIN_DECLS
 
-#undef __CHAMGE_INSIDE__
+#define CHAMGE_TYPE_MOCK_HUB_BACKEND       (chamge_mock_hub_backend_get_type ())
+G_DECLARE_FINAL_TYPE (ChamgeMockHubBackend, chamge_mock_hub_backend, CHAMGE, MOCK_HUB_BACKEND, ChamgeHubBackend)
 
-#endif // __CHAMGE_H__
+G_END_DECLS
+
+#endif // __CHAMGE_MOCK_HUB_BACKEND_H__

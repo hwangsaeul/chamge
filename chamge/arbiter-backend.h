@@ -55,12 +55,13 @@ struct _ChamgeArbiterBackendClass
                                                  const gchar           *edge_id);
   void          (* edge_delisted)               (ChamgeArbiterBackend  *self,
                                                  const gchar           *edge_id);
+  void          (* hub_enrolled)                (ChamgeArbiterBackend  *self,
+                                                 const gchar           *edge_id);
+  void          (* hub_delisted)                (ChamgeArbiterBackend  *self,
+                                                 const gchar           *edge_id);
 };
 
-typedef void (*ChamgeArbiterBackendEdgeEnrolled)        (const gchar           *edge_id, 
-                                                         ChamgeArbiterBackend  *arbiter_backend);
-
-typedef void (*ChamgeArbiterBackendEdgeDelisted)        (const gchar           *edge_id, 
+typedef void (*ChamgeArbiterBackendEnrollCallback)      (const gchar           *edge_id,
                                                          ChamgeArbiterBackend  *arbiter_backend);
 
 typedef void (*ChamgeArbiterBackendConnectionRequested) (const gchar           *edge_id, 
@@ -87,10 +88,13 @@ void    chamge_arbiter_backend_approve          (ChamgeArbiterBackend  *self,
                                                  const gchar           *edge_id);
 
 void    chamge_arbiter_backend_set_edge_handler (ChamgeArbiterBackend  *self,
-                                                 ChamgeArbiterBackendEdgeEnrolled       edge_enrolled,
-                                                 ChamgeArbiterBackendEdgeDelisted       edge_delisted,
+                                                 ChamgeArbiterBackendEnrollCallback     edge_enrolled,
+                                                 ChamgeArbiterBackendEnrollCallback     edge_delisted,
                                                  ChamgeArbiterBackendConnectionRequested
                                                                                         edge_connection_requested);
+ void    chamge_arbiter_backend_set_hub_handler (ChamgeArbiterBackend  *self,
+                                                 ChamgeArbiterBackendEnrollCallback     hub_enrolled,
+                                                 ChamgeArbiterBackendEnrollCallback     hub_delisted);
                                 
 G_END_DECLS
 
