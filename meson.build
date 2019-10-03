@@ -53,7 +53,7 @@ else
   rabbitmq_dep = declare_dependency(link_args: ['-lrabbitmq'])
 endif
 
-json_glib_dep = dependency ('json-glib-1.0', version: '>= 1.4.0')
+json_glib_dep = dependency ('json-glib-1.0', version: '>= 1.1.2')
 
 gnome = import('gnome')
 
