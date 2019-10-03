@@ -26,6 +26,7 @@
 #include <amqp.h>
 #include <amqp_tcp_socket.h>
 #include <json-glib/json-glib.h>
+#include <string.h>
 
 #define AMQP_ARBITER_BACKEND_SCHEMA_ID "org.hwangsaeul.Chamge1.Arbiter.AMQP"
 #define DEFAULT_CONTENT_TYPE "application/json"

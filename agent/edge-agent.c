@@ -21,6 +21,7 @@
 #include "edge-agent.h"
 
 #include <glib.h>
+#include <stdlib.h>
 
 #include <chamge/enumtypes.h>
 #include <chamge/edge.h>
