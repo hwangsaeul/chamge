@@ -557,21 +557,100 @@ chamge_amqp_arbiter_backend_user_command (ChamgeArbiterBackend *
 {
   ChamgeAmqpArbiterBackend *self =
       CHAMGE_AMQP_ARBITER_BACKEND (arbiter_backend);
+  g_autofree gchar *amqp_uri = NULL;
+  struct amqp_connection_info connection_info;
+  amqp_rpc_reply_t amqp_r;
+  amqp_connection_state_t amqp_conn;
+  amqp_socket_t *amqp_socket = NULL;
+
   g_autofree gchar *amqp_exchange_name = NULL;
   gint amqp_channel = 0;
   ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+
+  amqp_uri = g_settings_get_string (self->settings, "amqp-uri");
+  g_assert_nonnull (amqp_uri);
+
+  if (amqp_parse_url (amqp_uri, &connection_info) != AMQP_STATUS_OK) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_INVALID_PARAMETER, "url pasring failure");
+    goto out;
+  }
 
   amqp_channel = g_settings_get_int (self->settings, "amqp-channel");
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
 
+  amqp_conn = amqp_new_connection ();
+  amqp_socket = amqp_tcp_socket_new (amqp_conn);
+  g_assert_nonnull (amqp_socket);
+
+  if (amqp_socket_open (amqp_socket,
+          connection_info.host, connection_info.port)) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "socket open failure");
+    goto out;
+  }
+
+  /* TODO: The authentication method should be EXTERNAL
+   * if we don't want to share user/passwd
+   */
+  amqp_r = amqp_login (amqp_conn, connection_info.vhost, 0, 131072, 0,
+      AMQP_SASL_METHOD_PLAIN, connection_info.user, connection_info.password);
+  if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "login failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_r));
+    goto out;
+  }
+  if (!amqp_channel_open (amqp_conn, amqp_channel)) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "channel open failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
+    goto out;
+  }
+
+  g_debug ("success to login %s:%d/%s id[%s] pwd[%s]",
+      connection_info.host, connection_info.port,
+      connection_info.vhost, connection_info.user, connection_info.password);
+
   ret =
-      _handle_rpc_user_command (self->amqp_conn, amqp_channel, cmd,
+      _handle_rpc_user_command (amqp_conn, amqp_channel, cmd,
       amqp_exchange_name, out, error);
   if (ret != CHAMGE_RETURN_OK && *error != NULL) {
     g_debug ("rpc request failure >> %s", (*error)->message);
+    goto out;
   }
 
+  if (amqp_conn != NULL) {
+    gint destroy_ret = 0;
+    amqp_r = amqp_channel_close (amqp_conn, amqp_channel, AMQP_REPLY_SUCCESS);
+    if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "channel close failure >> %s",
+          _amqp_get_rpc_reply_string (amqp_r));
+      ret = CHAMGE_RETURN_FAIL;
+      goto out;
+    }
+    amqp_r = amqp_connection_close (amqp_conn, AMQP_REPLY_SUCCESS);
+    if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+          "connection close failure >> %s",
+          _amqp_get_rpc_reply_string (amqp_r));
+      ret = CHAMGE_RETURN_FAIL;
+      goto out;
+    }
+    destroy_ret = amqp_destroy_connection (amqp_conn);
+    if (destroy_ret < 0) {
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+          "connection destroy failure >> %s", amqp_error_string2 (destroy_ret));
+      ret = CHAMGE_RETURN_FAIL;
+      goto out;
+    }
+  }
+
+out:
   return ret;
 }
 
