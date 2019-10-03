@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include "amqp-arbiter-backend.h"
+#include "glib-compat.h"
 
 #include <gio/gio.h>
 #include <amqp.h>
