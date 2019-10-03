@@ -24,6 +24,7 @@
 #include "enumtypes.h"
 
 #include <glib.h>
+#include <string.h>
 
 typedef struct
 {
