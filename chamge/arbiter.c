@@ -37,7 +37,7 @@ typedef enum
   PROP_LAST = PROP_BACKEND
 } _ChamgeArbiterProperty;
 
-typedef enum
+enum
 {
   SIG_EDGE_ENROLLED,
   SIG_EDGE_DELISTED,
