@@ -187,6 +187,11 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
   JsonNode *root = NULL;
   JsonObject *json_object = NULL;
 
+  const gchar *device_type = NULL;
+  const gchar *uid = NULL;
+  const gchar *method = NULL;
+  gchar *response = NULL;
+
   if (!json_parser_load_from_data (parser, body, len, &error)) {
     g_debug ("failed to parse body: %s", error->message);
     return g_strdup_printf ("{\"result\":\"failed to parse body\"}");
@@ -194,38 +199,54 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
 
   root = json_parser_get_root (parser);
   json_object = json_node_get_object (root);
+  if (json_object_has_member (json_object, "deviceType")) {
+    JsonNode *node = json_object_get_member (json_object, "deviceType");
+    device_type = json_node_get_string (node);
+  }
+  if (device_type == NULL) {
+    g_debug ("device type is missing");
+    return g_strdup ("{\"result\":\"device type is missing\"}");
+  }
+
   if (json_object_has_member (json_object, "method")) {
     JsonNode *node = json_object_get_member (json_object, "method");
-    const gchar *method = json_node_get_string (node);
-    const gchar *edge_id = NULL;
-    gchar *response = NULL;
+    method = json_node_get_string (node);
+  }
+  if (method == NULL) {
+    return g_strdup ("{\"result\":\"method is missing\"}");
+  }
 
+  if (!g_strcmp0 (device_type, "edge")) {
     if (json_object_has_member (json_object, "edgeId")) {
-      node = json_object_get_member (json_object, "edgeId");
-      edge_id = json_node_get_string (node);
-      if (edge_id == NULL)
-        return g_strdup ("{\"result\":\"edge_id does not exist\"}");
+      JsonNode *node = json_object_get_member (json_object, "edgeId");
+      uid = json_node_get_string (node);
     }
-    g_debug ("method: %s", method);
+    if (uid == NULL)
+      return g_strdup ("{\"result\":\"edgeId does not exist\"}");
+  }
+  g_debug ("device type : %s, method: %s, id: %s", device_type, method, uid);
 
+  if (!g_strcmp0 (device_type, "edge")) {
     if (!g_strcmp0 (method, "enroll")) {
-      _handle_edge_enroll (self, edge_id);
+      _handle_edge_enroll (self, uid);
       response = g_strdup ("{\"result\":\"enrolled\"}");
     } else if (!g_strcmp0 (method, "activate")) {
-      _handle_edge_activate (self, edge_id);
+      _handle_edge_activate (self, uid);
       response = g_strdup ("{\"result\":\"activated\"}");
     } else if (!g_strcmp0 (method, "deactdivate")) {
-      _handle_edge_deactivate (self, edge_id);
+      _handle_edge_deactivate (self, uid);
       response = g_strdup ("{\"result\":\"deactivated\"}");
     } else {
       response =
           g_strdup_printf ("{\"result\":\"method(%s) is not supported\"}",
           method);
     }
-    return response;
+  } else {
+    response =
+        g_strdup_printf ("{\"result\":\"unknown device type (%s)\"}",
+        device_type);
   }
-
-  return g_strdup ("{\"result\":\"method does not exist\"}");
+  return response;
 }
 
 static gboolean
