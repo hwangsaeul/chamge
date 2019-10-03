@@ -4,7 +4,8 @@ configure_file(output: 'config.h', configuration: cdata)
 
 schema = gnome.compile_schemas (
   depend_files: files('org.hwangsaeul.Chamge1.Arbiter.AMQP.gschema.xml',
-                      'org.hwangsaeul.Chamge1.Edge.AMQP.gschema.xml'),
+                      'org.hwangsaeul.Chamge1.Edge.AMQP.gschema.xml',
+                      'org.hwangsaeul.Chamge1.Hub.AMQP.gschema.xml'),
 )
 
 source_h = [
@@ -14,6 +15,8 @@ source_h = [
   'arbiter-backend.h',
   'edge.h',
   'edge-backend.h',
+  'hub.h',
+  'hub-backend.h',
 ]
 
 source_c = [
@@ -27,6 +30,10 @@ source_c = [
   'edge-backend.c',
   'mock-edge-backend.c',
   'amqp-edge-backend.c',
+  'hub.c',
+  'hub-backend.c',
+  'mock-hub-backend.c',
+  'amqp-hub-backend.c',
 ]
 
 install_headers(source_h, subdir: chamge_install_header_subdir)

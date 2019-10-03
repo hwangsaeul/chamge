@@ -40,10 +40,14 @@ struct _ChamgeArbiterClass
   void  (* approve)                     (ChamgeArbiter *self,
                                          const gchar   *uid);
 
-  /* signals */
-  void  (* enrolled)                    (ChamgeArbiter *self,
+ /* signals */
+  void  (* edge_enrolled)               (ChamgeArbiter *self,
                                          const gchar   *uid);
-  void  (* delisted)                    (ChamgeArbiter *self,
+  void  (* edge_delisted)               (ChamgeArbiter *self,
+                                         const gchar   *uid);
+  void  (* hub_enrolled)                (ChamgeArbiter *self,
+                                         const gchar   *uid);
+  void  (* hub_delisted)                (ChamgeArbiter *self,
                                          const gchar   *uid);
 };
 

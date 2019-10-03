@@ -1,6 +1,6 @@
 /**
  *  Copyright 2019 SK Telecom Co., Ltd.
- *    Author: Jeongseok Kim <jeongseok.kim@sk.com>
+ *    AUthor: Heekyoung Seo <hkseo@sk.com>
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,18 +16,16 @@
  *
  */
 
-#ifndef __CHAMGE_H__
-#define __CHAMGE_H__
+#ifndef __CHAMGE_AMQP_HUB_BACKEND_H__
+#define __CHAMGE_AMQP_HUB_BACKEND_H__
 
-#define __CHAMGE_INSIDE__
+#include <chamge/hub-backend.h>
 
-#include <chamge/types.h>
-#include <chamge/enumtypes.h>
-#include <chamge/node.h>
-#include <chamge/edge.h>
-#include <chamge/hub.h>
-#include <chamge/arbiter.h>
+G_BEGIN_DECLS
 
-#undef __CHAMGE_INSIDE__
+#define CHAMGE_TYPE_AMQP_HUB_BACKEND   (chamge_amqp_hub_backend_get_type ())
+G_DECLARE_FINAL_TYPE (ChamgeAmqpHubBackend, chamge_amqp_hub_backend, CHAMGE, AMQP_HUB_BACKEND, ChamgeHubBackend)
 
-#endif // __CHAMGE_H__
+G_END_DECLS
+
+#endif // __CHAMGE_AMQP_HUB_BACKEND_H__

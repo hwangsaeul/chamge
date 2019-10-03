@@ -159,7 +159,8 @@ _handle_edge_enroll (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
 {
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
 
-  klass->edge_enrolled (CHAMGE_ARBITER_BACKEND (self), edge_id);
+  if (klass->edge_enrolled != NULL)
+    klass->edge_enrolled (CHAMGE_ARBITER_BACKEND (self), edge_id);
 }
 
 static void
@@ -173,9 +174,33 @@ _handle_edge_deactivate (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
 {
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
 
-  klass->edge_delisted (CHAMGE_ARBITER_BACKEND (self), edge_id);
+  if (klass->edge_delisted != NULL)
+    klass->edge_delisted (CHAMGE_ARBITER_BACKEND (self), edge_id);
 }
 
+static void
+_handle_hub_enroll (ChamgeAmqpArbiterBackend * self, const gchar * hub_id)
+{
+  ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+
+  if (klass->hub_enrolled != NULL)
+    klass->hub_enrolled (CHAMGE_ARBITER_BACKEND (self), hub_id);
+}
+
+static void
+_handle_hub_activate (ChamgeAmqpArbiterBackend * self, const gchar * hub_id)
+{
+  /* TODO : check whether manager need to handle activate request of edge */
+}
+
+static void
+_handle_hub_deactivate (ChamgeAmqpArbiterBackend * self, const gchar * hub_id)
+{
+  ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
+
+  if (klass->hub_delisted != NULL)
+    klass->hub_delisted (CHAMGE_ARBITER_BACKEND (self), hub_id);
+}
 
 static gchar *
 _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
@@ -223,10 +248,8 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
     }
     if (uid == NULL)
       return g_strdup ("{\"result\":\"edgeId does not exist\"}");
-  }
-  g_debug ("device type : %s, method: %s, id: %s", device_type, method, uid);
 
-  if (!g_strcmp0 (device_type, "edge")) {
+    g_debug ("device type : %s, method: %s, id: %s", device_type, method, uid);
     if (!g_strcmp0 (method, "enroll")) {
       _handle_edge_enroll (self, uid);
       response = g_strdup ("{\"result\":\"enrolled\"}");
@@ -235,6 +258,29 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
       response = g_strdup ("{\"result\":\"activated\"}");
     } else if (!g_strcmp0 (method, "deactdivate")) {
       _handle_edge_deactivate (self, uid);
+      response = g_strdup ("{\"result\":\"deactivated\"}");
+    } else {
+      response =
+          g_strdup_printf ("{\"result\":\"method(%s) is not supported\"}",
+          method);
+    }
+  } else if (!g_strcmp0 (device_type, "hub")) {
+    if (json_object_has_member (json_object, "hubId")) {
+      JsonNode *node = json_object_get_member (json_object, "hubId");
+      uid = json_node_get_string (node);
+    }
+    if (uid == NULL)
+      return g_strdup ("{\"result\":\"hubId does not exist\"}");
+
+    g_debug ("device type : %s, method: %s, id: %s", device_type, method, uid);
+    if (!g_strcmp0 (method, "enroll")) {
+      _handle_hub_enroll (self, uid);
+      response = g_strdup ("{\"result\":\"enrolled\"}");
+    } else if (!g_strcmp0 (method, "activate")) {
+      _handle_hub_activate (self, uid);
+      response = g_strdup ("{\"result\":\"activated\"}");
+    } else if (!g_strcmp0 (method, "deactdivate")) {
+      _handle_hub_deactivate (self, uid);
       response = g_strdup ("{\"result\":\"deactivated\"}");
     } else {
       response =

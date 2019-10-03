@@ -34,6 +34,9 @@ typedef struct
   GClosure *edge_enrolled;
   GClosure *edge_delisted;
   GClosure *edge_connection_requested;
+
+  GClosure *hub_enrolled;
+  GClosure *hub_delisted;
 } ChamgeArbiterBackendPrivate;
 
 typedef enum
@@ -126,6 +129,41 @@ chamge_arbiter_backend_edge_delisted (ChamgeArbiterBackend * self,
   }
 }
 
+static void
+chamge_arbiter_backend_hub_enrolled (ChamgeArbiterBackend * self,
+    const gchar * hub_id)
+{
+  ChamgeArbiterBackendPrivate *priv =
+      chamge_arbiter_backend_get_instance_private (self);
+
+  if (priv->hub_enrolled) {
+    GValue values[2] = { G_VALUE_INIT };
+    g_value_init (&values[0], G_TYPE_STRING);
+    g_value_set_string (&values[0], hub_id);
+    g_value_init (&values[1], CHAMGE_TYPE_ARBITER_BACKEND);
+    g_value_set_object (&values[1], self);
+
+    g_closure_invoke (priv->hub_enrolled, NULL, 2, values, NULL);
+  }
+}
+
+static void
+chamge_arbiter_backend_hub_delisted (ChamgeArbiterBackend * self,
+    const gchar * hub_id)
+{
+  ChamgeArbiterBackendPrivate *priv =
+      chamge_arbiter_backend_get_instance_private (self);
+
+  if (priv->hub_delisted) {
+    GValue values[2] = { G_VALUE_INIT };
+    g_value_init (&values[0], G_TYPE_STRING);
+    g_value_set_string (&values[0], hub_id);
+    g_value_init (&values[1], CHAMGE_TYPE_ARBITER_BACKEND);
+    g_value_set_object (&values[1], self);
+
+    g_closure_invoke (priv->hub_delisted, NULL, 2, values, NULL);
+  }
+}
 
 static void
 chamge_arbiter_backend_dispose (GObject * object)
@@ -139,6 +177,9 @@ chamge_arbiter_backend_dispose (GObject * object)
   g_clear_pointer (&priv->edge_enrolled, g_closure_unref);
   g_clear_pointer (&priv->edge_delisted, g_closure_unref);
   g_clear_pointer (&priv->edge_connection_requested, g_closure_unref);
+
+  g_clear_pointer (&priv->hub_enrolled, g_closure_unref);
+  g_clear_pointer (&priv->hub_delisted, g_closure_unref);
 
   G_OBJECT_CLASS (chamge_arbiter_backend_parent_class)->dispose (object);
 }
@@ -161,6 +202,9 @@ chamge_arbiter_backend_class_init (ChamgeArbiterBackendClass * klass)
 
   klass->edge_enrolled = chamge_arbiter_backend_edge_enrolled;
   klass->edge_delisted = chamge_arbiter_backend_edge_delisted;
+
+  klass->hub_enrolled = chamge_arbiter_backend_hub_enrolled;
+  klass->hub_delisted = chamge_arbiter_backend_hub_delisted;
 }
 
 static void
@@ -278,8 +322,8 @@ chamge_arbiter_backend_approve (ChamgeArbiterBackend * self,
 
 void
 chamge_arbiter_backend_set_edge_handler (ChamgeArbiterBackend * self,
-    ChamgeArbiterBackendEdgeEnrolled edge_enrolled,
-    ChamgeArbiterBackendEdgeDelisted edge_delisted,
+    ChamgeArbiterBackendEnrollCallback edge_enrolled,
+    ChamgeArbiterBackendEnrollCallback edge_delisted,
     ChamgeArbiterBackendConnectionRequested edge_connection_requested)
 {
   ChamgeArbiterBackendPrivate *priv =
@@ -309,4 +353,30 @@ chamge_arbiter_backend_set_edge_handler (ChamgeArbiterBackend * self,
     g_closure_set_marshal (priv->edge_connection_requested,
         g_cclosure_marshal_generic);
   }
+}
+
+void
+chamge_arbiter_backend_set_hub_handler (ChamgeArbiterBackend * self,
+    ChamgeArbiterBackendEnrollCallback hub_enrolled,
+    ChamgeArbiterBackendEnrollCallback hub_delisted)
+{
+  ChamgeArbiterBackendPrivate *priv =
+      chamge_arbiter_backend_get_instance_private (self);
+
+  g_return_if_fail (CHAMGE_IS_ARBITER_BACKEND (self));
+
+  g_clear_pointer (&priv->hub_enrolled, g_closure_unref);
+  g_clear_pointer (&priv->hub_delisted, g_closure_unref);
+
+  if (hub_enrolled != NULL) {
+    g_debug ("set hub enrolled : %p", hub_enrolled);
+    priv->hub_enrolled = g_cclosure_new (G_CALLBACK (hub_enrolled), self, NULL);
+    g_closure_set_marshal (priv->hub_enrolled, g_cclosure_marshal_generic);
+  }
+
+  if (hub_delisted != NULL) {
+    priv->hub_delisted = g_cclosure_new (G_CALLBACK (hub_delisted), self, NULL);
+    g_closure_set_marshal (priv->hub_delisted, g_cclosure_marshal_generic);
+  }
+
 }

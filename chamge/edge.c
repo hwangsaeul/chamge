@@ -40,7 +40,7 @@ typedef enum
   PROP_LAST = PROP_BACKEND
 } _ChamgeEdgeProperty;
 
-typedef enum
+enum
 {
   SIG_USER_COMMAND,
 
