@@ -469,7 +469,9 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
    * request-body need to be filled with real request data
    */
   request_body =
-      g_strdup_printf ("{\"method\":\"enroll\",\"edgeId\":\"%s\"}", edge_id);
+      g_strdup_printf
+      ("{\"method\":\"enroll\",\"deviceType\":\"edge\",\"edgeId\":\"%s\"}",
+      edge_id);
   if (_amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
           amqp_exchange_name, amqp_enroll_q_name, &response_body,
           &error) != CHAMGE_RETURN_OK) {
@@ -669,7 +671,9 @@ chamge_amqp_edge_backend_activate (ChamgeEdgeBackend * edge_backend)
 
   /* send activate */
   request_body =
-      g_strdup_printf ("{\"method\":\"activate\",\"edgeId\":\"%s\"}", edge_id);
+      g_strdup_printf
+      ("{\"method\":\"activate\",\"deviceType\":\"edge\",\"edgeId\":\"%s\"}",
+      edge_id);
   if (_amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
           amqp_exchange_name, amqp_enroll_q_name, &response_body,
           &error) != CHAMGE_RETURN_OK) {
