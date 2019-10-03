@@ -7,8 +7,6 @@ dbus_ifaces = [
   [ 'Edge.Manager', 'edge-manager-generated' ]
 ]
 
-dbus_headers = []
-
 if meson.version().version_compare('>= 0.46.0')
 
   foreach iface: dbus_ifaces
@@ -21,8 +19,7 @@ if meson.version().version_compare('>= 0.46.0')
       namespace: 'ChamgeDBus',
     )
 
-    dbus_headers = dbus_sources[0]
-    sources += dbus_sources[1]
+    sources += dbus_sources
 
   endforeach
 
@@ -39,14 +36,7 @@ else
       command: [codegen, iface[0], iface[1], meson.current_build_dir(), '@INPUT@', '@OUTPUT@']
     )
 
-    # FIXME: more tricky way to support ubuntu 16.04
-    if meson.version().version_compare('<= 0.41.0')
-      dbus_headers += [iface[1] + '.h']
-      sources += [iface[1] + '.c']
-    else
-      dbus_headers += dbus_sources[0]
-      sources += dbus_sources[1]
-    endif
+    sources += dbus_sources
 
   endforeach
 
@@ -54,7 +44,7 @@ endif
 
 libchamge_dbus = shared_library(
   'chamge-dbus-@0@'.format(apiversion),
-  sources, dbus_headers,
+  sources,
   version: libversion,
   soversion: soversion,
   include_directories: chamge_incs,
