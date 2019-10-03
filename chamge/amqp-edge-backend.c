@@ -513,7 +513,8 @@ _process_json_message (ChamgeAmqpEdgeBackend * self, const gchar * body,
   {
     ChamgeEdgeBackendClass *backend_class =
         CHAMGE_EDGE_BACKEND_GET_CLASS (&self->parent);
-    backend_class->user_command (&self->parent, body, &response, &error);
+    g_autofree gchar *command = g_strndup (body, len);
+    backend_class->user_command (&self->parent, command, &response, &error);
     if (response == NULL)
       response = g_strdup ("{\"result\":\"not ok\"}");
   }
