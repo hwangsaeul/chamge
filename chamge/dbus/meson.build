@@ -39,8 +39,14 @@ else
       command: [codegen, iface[0], iface[1], meson.current_build_dir(), '@INPUT@', '@OUTPUT@']
     )
 
-    dbus_headers += dbus_sources[0]
-    sources += dbus_sources[1]
+    # FIXME: more tricky way to support ubuntu 16.04
+    if meson.version().version_compare('<= 0.41.0')
+      dbus_headers += [iface[1] + '.h']
+      sources += [iface[1] + '.c']
+    else
+      dbus_headers += dbus_sources[0]
+      sources += dbus_sources[1]
+    endif
 
   endforeach
 
