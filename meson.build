@@ -57,10 +57,11 @@ json_glib_dep = dependency ('json-glib-1.0', version: '>= 1.1.2')
 
 gnome = import('gnome')
 
-chamge_incs = include_directories('.', 'chamge')
+chamge_incs = include_directories('.', 'chamge', 'glib-compat')
 
 common_ldflags = [ ]
 
+subdir('glib-compat')
 subdir('chamge')
 subdir('agent')
 subdir('tests')
