@@ -170,8 +170,6 @@ static gboolean
 chamge_edge_agent_handle_enroll (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
-
   chamge_dbus_edge_manager_complete_enroll (manager, invocation);
 
   return TRUE;
@@ -181,8 +179,6 @@ static gboolean
 chamge_edge_agent_handle_delist (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
-
   chamge_dbus_edge_manager_complete_delist (manager, invocation);
 
   return TRUE;
@@ -192,8 +188,6 @@ static gboolean
 chamge_edge_agent_handle_activate (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
-
   chamge_dbus_edge_manager_complete_activate (manager, invocation);
 
   return TRUE;
@@ -203,8 +197,6 @@ static gboolean
 chamge_edge_agent_handle_deactivate (ChamgeDBusEdgeManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
-
   chamge_dbus_edge_manager_complete_deactivate (manager, invocation);
 
   return TRUE;
@@ -214,8 +206,6 @@ static gboolean
 chamge_edge_agent_handle_request_srtconnection_uri (ChamgeDBusEdgeManager *
     manager, GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeEdgeAgent *self = CHAMGE_EDGE_AGENT (user_data);
-
   chamge_dbus_edge_manager_complete_request_srtconnection_uri (manager,
       invocation, NULL);
 

@@ -661,9 +661,6 @@ static void
 chamge_amqp_arbiter_backend_approve (ChamgeArbiterBackend * arbiter_backend,
     const gchar * edge_id)
 {
-  ChamgeAmqpArbiterBackend *self =
-      CHAMGE_AMQP_ARBITER_BACKEND (arbiter_backend);
-
   /* TODO: publish approval message */
   g_debug ("approved (id: %s)", edge_id);
 }
