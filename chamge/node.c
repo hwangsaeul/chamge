@@ -190,6 +190,7 @@ chamge_node_class_init (ChamgeNodeClass * klass)
   klass->activate = chamge_node_activate_default;
   klass->deactivate = chamge_node_deactivate_default;
   klass->get_uid = chamge_node_get_uid_default;
+  klass->user_command = chamge_node_user_command_default;
 }
 
 static void
@@ -374,7 +375,6 @@ chamge_node_user_command (ChamgeNode * self, const gchar * cmd, gchar ** out,
 {
   ChamgeNodeClass *klass;
   ChamgeReturn ret = CHAMGE_RETURN_OK;
-  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
   g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
@@ -382,5 +382,9 @@ chamge_node_user_command (ChamgeNode * self, const gchar * cmd, gchar ** out,
   klass = CHAMGE_NODE_GET_CLASS (self);
   g_return_val_if_fail (klass->user_command != NULL, CHAMGE_RETURN_FAIL);
 
-  return klass->user_command (self, cmd, out, error);
+  ret = klass->user_command (self, cmd, out, error);
+  if (ret == CHAMGE_RETURN_FAIL)
+    g_debug ("error in user command: %s", *error ? (*error)->message : "NULL");
+
+  return ret;
 }
