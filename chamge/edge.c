@@ -218,7 +218,6 @@ chamge_edge_class_init (ChamgeEdgeClass * klass)
 static void
 chamge_edge_init (ChamgeEdge * self)
 {
-  ChamgeEdgePrivate *priv = chamge_edge_get_instance_private (self);
 }
 
 ChamgeEdge *
@@ -240,7 +239,6 @@ chamge_edge_request_target_uri (ChamgeEdge * self, GError ** error)
   ChamgeEdgeClass *klass;
   ChamgeNodeState state;
   g_autofree gchar *target_uri = NULL;
-  ChamgeEdgePrivate *priv = chamge_edge_get_instance_private (self);
 
   g_return_val_if_fail (CHAMGE_IS_EDGE (self), NULL);
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
