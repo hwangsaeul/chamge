@@ -3,7 +3,7 @@ project('chamge', 'c',
   license: 'Apache-2.0',
   meson_version: '>= 0.40',
   default_options: [ 'warning_level=1',
-                     'buildtype=debugoptimized' ])
+                     'buildtype=debug' ])
 
 project_version = meson.project_version()
 version_arr = project_version.split('.')
@@ -65,6 +65,7 @@ subdir('glib-compat')
 subdir('chamge')
 subdir('agent')
 subdir('tests')
+subdir('examples')
 
 if meson.version().version_compare('>= 0.46.0')
   python3 = import('python').find_installation()
