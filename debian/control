@@ -12,17 +12,25 @@ Homepage: https://github.com/hwangsaeul/chamge
 Vcs-Browser: https://github.com/hwangsaeul/chamge
 Vcs-Git: https://github.com/hwangsaeul/chamge.git
 
-Package: chamge
+Package: libchamge1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Connection Broker API
  Chamge is a connection broker API for SRT streaming service.
 
-Package: chamge-dev
-Section: devel
+Package: libchamge-dev
+Section: libdevel
 Architecture: any
-Depends: chamge (= ${binary:Version}), ${misc:Depends}
+Depends: libchamge1 (= ${binary:Version}), ${misc:Depends}
 Description: Connection Broker API
  Chamge is a connection broker API for SRT streaming service.
  .
  This package contains development files for chamge.
+
+Package: chamge-tools
+Architecture: any
+Section: utils
+Depends: libchamge1 (= ${binary:Version}), ${misc:Depends}
+Description: Connection Broker API
+ Chamge is a connection broker API for SRT streaming service.
+
