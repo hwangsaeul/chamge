@@ -4,11 +4,37 @@ chamge_install_header_subdir = join_paths(chamge_api_name, 'chamge')
 
 configure_file(output: 'config.h', configuration: cdata)
 
+schema_xmls = [
+  'org.hwangsaeul.Chamge1.Arbiter.AMQP.gschema.xml',
+  'org.hwangsaeul.Chamge1.Edge.AMQP.gschema.xml',
+  'org.hwangsaeul.Chamge1.Hub.AMQP.gschema.xml',
+]
+
 schema = gnome.compile_schemas (
-  depend_files: files('org.hwangsaeul.Chamge1.Arbiter.AMQP.gschema.xml',
-                      'org.hwangsaeul.Chamge1.Edge.AMQP.gschema.xml',
-                      'org.hwangsaeul.Chamge1.Hub.AMQP.gschema.xml'),
+  depend_files: files(schema_xmls),
 )
+
+if meson.version().version_compare('>= 0.45.1')
+
+  gio_schemasdir = dependency('gio-2.0').get_pkgconfig_variable(
+    'schemasdir',
+    define_variable: [ 'datadir', join_paths(get_option('prefix'), get_option('datadir')) ],
+    default: join_paths(get_option('prefix'), get_option('datadir'), 'glib-2.0/schemas'),
+  )
+
+else
+
+  # only for ubuntu 16.04
+  gio_schemasdir = join_paths(get_option('prefix'), get_option('datadir'), 'glib-2.0/schemas')
+
+endif
+
+foreach xml: schema_xmls
+  install_data(
+    xml,
+    install_dir: gio_schemasdir,
+  )
+endforeach
 
 source_h = [
   'types.h',
