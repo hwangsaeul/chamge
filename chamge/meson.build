@@ -1,3 +1,5 @@
+pkg = import('pkgconfig')
+
 chamge_install_header_subdir = join_paths(chamge_api_name, 'chamge')
 
 configure_file(output: 'config.h', configuration: cdata)
@@ -74,3 +76,38 @@ libchamge_dep = declare_dependency(link_with: libchamge,
 )
 
 subdir('dbus')
+
+if meson.version().version_compare('>= 0.48.2')
+
+  pkg.generate(libchamge,
+    libraries : [ libchamge_dbus_dep, rabbitmq_dep, json_glib_dep ],
+    name : meson.project_name(),
+    description : 'A message broker library for SRT Streaming service',
+    filebase : chamge_api_name,
+    subdirs: chamge_api_name,
+    variables: 'exec_prefix=${prefix}'
+  )
+
+else
+
+  pkg.generate(
+    libraries : [ libchamge, libchamge_dbus ],
+    version : meson.project_version(),
+    name : meson.project_name(),
+    description : 'A message broker library for SRT Streaming service',
+    filebase : chamge_api_name,
+    requires : [
+      'librabbitmq',
+      'json-glib-1.0',
+    ],
+    requires_private : [
+      'glib-2.0 ' + glib_req_version,
+      'gobject-2.0 ' + glib_req_version,
+      'gio-2.0 ' + glib_req_version,
+    ],
+    subdirs: chamge_api_name,
+    variables: 'exec_prefix=${prefix}'
+  )
+
+endif
+
