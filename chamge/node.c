@@ -273,6 +273,7 @@ chamge_node_enroll (ChamgeNode * self, gboolean lazy)
   if (ret == CHAMGE_RETURN_OK) {
     locker = g_mutex_locker_new (&priv->mutex);
     priv->state = CHAMGE_NODE_STATE_ENROLLED;
+    g_signal_emit (self, signals[SIG_STATE_CHANGED], 0, priv->state);
   }
 
 out:
