@@ -402,8 +402,11 @@ _validate_response (const gchar * response, const gchar * shouldbe)
   JsonNode *root = NULL;
   JsonObject *json_object = NULL;
 
-  if (!json_parser_load_from_data (parser, response, strlen (response), &error)) {
-    g_debug ("failed to parse body: %s", error->message);
+  if (response == NULL
+      || !json_parser_load_from_data (parser, response, strlen (response),
+          &error)) {
+    g_debug ("failed to parse body: %s",
+        error == NULL ? "(null response)" : error->message);
     return ret;
   }
 
