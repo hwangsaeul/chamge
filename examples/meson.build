@@ -20,7 +20,7 @@ edge_dummy = executable (
   include_directories: chamge_incs,
   c_args: [ chamge_example_c_args, '-DG_LOG_DOMAIN="CHAMGE-EDGE"' ],
   dependencies: [ gobject_dep, gio_dep, libchamge_dbus_dep, libchamge_dep ],
-  install: true
+  install: false
 )
 
 hub_dummy = executable (
@@ -29,7 +29,7 @@ hub_dummy = executable (
   include_directories: chamge_incs,
   c_args: [ chamge_example_c_args, '-DG_LOG_DOMAIN="CHAMGE-HUB"' ],
   dependencies: [ gobject_dep, gio_dep, libchamge_dbus_dep, libchamge_dep ],
-  install: true
+  install: false
 )
 
 arbiter_dummy = executable (
@@ -38,5 +38,5 @@ arbiter_dummy = executable (
   include_directories: chamge_incs,
   c_args: [ chamge_example_c_args, '-DG_LOG_DOMAIN="CHAMGE-EDGE"' ],
   dependencies: [ gobject_dep, gio_dep, libchamge_dbus_dep, libchamge_dep ],
-  install: true
+  install: false
 )
