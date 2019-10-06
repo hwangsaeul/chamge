@@ -56,8 +56,13 @@ void
 user_command_cb (ChamgeHub * hub, const gchar * user_command,
     gchar ** response, GError ** error)
 {
+  g_autofree gchar *record_id = g_uuid_string_random ();
+  record_id =
+      g_compute_checksum_for_string (G_CHECKSUM_SHA256, record_id,
+      strlen (record_id));
   printf ("[DUMMY] ==> user command callback >> %s\n", user_command);
-  *response = g_strdup ("{\"result\":\"ok\"}");
+  *response =
+      g_strdup_printf ("{\"result\":\"ok\",\"recordId\":\"%s\"}", record_id);
 }
 
 int

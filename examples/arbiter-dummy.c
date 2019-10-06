@@ -20,7 +20,6 @@
 
 #include <chamge/chamge.h>
 
-#include <poll.h>
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
@@ -147,8 +146,7 @@ do_user_command (gpointer data)
 
         cmd =
             g_strdup_printf
-            ("{\"to\":\"%s\",\"method\":\"streamingStart\",\"edgeId\":\"%s\"}",
-            edge_id, edge_id);
+            ("{\"to\":\"%s\",\"method\":\"streamingStart\"}", edge_id);
         printf ("[DUMMY] ==> user command : %s\n", cmd);
         ret =
             chamge_node_user_command (CHAMGE_NODE (context->arbiter), cmd,
@@ -175,8 +173,7 @@ do_user_command (gpointer data)
 
         cmd =
             g_strdup_printf
-            ("{\"to\":\"%s\",\"method\":\"streamingStop\",\"edgeId\":\"%s\"}",
-            edge_id, edge_id);
+            ("{\"to\":\"%s\",\"method\":\"streamingStop\"}", edge_id);
         printf ("[DUMMY] ==> user command : %s\n", cmd);
         ret =
             chamge_node_user_command (CHAMGE_NODE (context->arbiter), cmd,
@@ -202,8 +199,7 @@ do_user_command (gpointer data)
         }
         cmd =
             g_strdup_printf
-            ("{\"to\":\"%s\",\"method\":\"recordingStart\",\"hubId\":\"%s\"}",
-            hub_id, hub_id);
+            ("{\"to\":\"%s\",\"method\":\"recordingStart\"}", hub_id);
         printf ("[DUMMY] ==> user command : %s\n", cmd);
         ret =
             chamge_node_user_command (CHAMGE_NODE (context->arbiter), cmd,
@@ -230,8 +226,7 @@ do_user_command (gpointer data)
 
         cmd =
             g_strdup_printf
-            ("{\"to\":\"%s\",\"method\":\"recordingStop\",\"hubId\":\"%s\"}",
-            hub_id, hub_id);
+            ("{\"to\":\"%s\",\"method\":\"recordingStop\"}", hub_id);
         printf ("[DUMMY] ==> user command : %s\n", cmd);
         ret =
             chamge_node_user_command (CHAMGE_NODE (context->arbiter), cmd,

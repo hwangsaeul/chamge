@@ -57,7 +57,7 @@ user_command_cb (ChamgeEdge * edge, const gchar * user_command,
     gchar ** response, GError ** error)
 {
   printf ("[DUMMY] ==> user command callback >> %s\n", user_command);
-  *response = g_strdup ("{\"result\":\"ok\"}");
+  *response = g_strdup ("{\"result\":\"ok\",\"url\":\"srt://localhost:8888\"}");
 }
 
 int
