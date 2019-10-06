@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN" "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd" name="/">
+  <interface name="org.hwangsaeul.Chamge1.Arbiter.Manager">
+
+    <method name="Enroll">
+    </method>
+
+    <method name="Delist">
+    </method>
+
+    <method name="Activate">
+    </method>
+
+    <method name="Deactivate">
+    </method>
+
+    <method name="UserCommand">
+      <arg name="command" type="s" direction="in"/>
+      <arg name="result" type="i" direction="out"/>
+      <arg name="response" type="s" direction="out"/>
+    </method>
+
+    <!--
+    Status:
+
+    Status of the object.
+    Valid statuses: 0 = NULL, 1 = ENROLLED, 2 = ACTIVATED.
+    -->
+    <property name="State" type="i" access="read"/>
+  </interface>
+</node>

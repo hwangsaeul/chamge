@@ -4,7 +4,8 @@ sources = [
 ]
 
 dbus_ifaces = [
-  [ 'Edge.Manager', 'edge-manager-generated' ]
+  [ 'Edge.Manager', 'edge-manager-generated' ],
+  [ 'Arbiter.Manager', 'arbiter-manager-generated' ]
 ]
 
 foreach iface: dbus_ifaces
