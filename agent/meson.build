@@ -1,20 +1,23 @@
-source_h = [
-  'edge-agent.h',
-]
-
-source_c = [
-  'edge-agent.c',
+agents = [
+  'edge-agent',
+  'arbiter-agent',
 ]
 
 chamge_agent_c_args = [
   '-DCHAMGE_COMPILATION',
 ]
 
-chamge_edge_agent = executable (
-  'chamge-edge-agent',
-  source_c,
-  include_directories: chamge_incs,
-  c_args: [ chamge_agent_c_args, '-DG_LOG_DOMAIN="CHAMGE-EDGE"' ],
-  dependencies: [ gobject_dep, gio_dep, libchamge_dbus_dep, libchamge_dep ],
-  install: true
-)
+foreach agent: agents
+  exe_name = 'chamge-@0@'.format(agent)
+  src_file = '@0@.c'.format(agent)
+
+  executable(exe_name,
+    src_file,
+    install: true,
+    include_directories: chamge_incs,
+    dependencies : [ libgaeguli_dep ],
+    c_args: [ chamge_agent_c_args, '-DG_LOG_DOMAIN="CHAMGE-ARBITER"' ],
+  dependencies: [ gobject_dep, gio_dep, libchamge_dbus_dep, libchamge_dep, json_glib_dep ],
+  )
+
+endforeach
