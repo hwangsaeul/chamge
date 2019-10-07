@@ -299,6 +299,7 @@ chamge_node_delist (ChamgeNode * self)
   if (ret == CHAMGE_RETURN_OK) {
     locker = g_mutex_locker_new (&priv->mutex);
     priv->state = CHAMGE_NODE_STATE_NULL;
+    g_signal_emit (self, signals[SIG_STATE_CHANGED], 0, priv->state);
   }
 
   return ret;
@@ -323,6 +324,7 @@ chamge_node_activate (ChamgeNode * self)
   if (ret == CHAMGE_RETURN_OK) {
     locker = g_mutex_locker_new (&priv->mutex);
     priv->state = CHAMGE_NODE_STATE_ACTIVATED;
+    g_signal_emit (self, signals[SIG_STATE_CHANGED], 0, priv->state);
   }
 
   return ret;
@@ -347,6 +349,7 @@ chamge_node_deactivate (ChamgeNode * self)
   if (ret == CHAMGE_RETURN_OK) {
     locker = g_mutex_locker_new (&priv->mutex);
     priv->state = CHAMGE_NODE_STATE_ENROLLED;
+    g_signal_emit (self, signals[SIG_STATE_CHANGED], 0, priv->state);
   }
 
   return ret;
