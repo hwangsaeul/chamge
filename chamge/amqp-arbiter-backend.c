@@ -94,7 +94,9 @@ chamge_amqp_arbiter_backend_enroll (ChamgeArbiterBackend * arbiter_backend)
 
   struct amqp_connection_info amqp_c_info;
   amqp_bytes_t queue;
-  amqp_queue_declare_ok_t *amqp_r = NULL;
+  amqp_queue_declare_ok_t *amqp_declare_r = NULL;
+  amqp_rpc_reply_t amqp_r;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
 
   ChamgeAmqpArbiterBackend *self =
       CHAMGE_AMQP_ARBITER_BACKEND (arbiter_backend);
@@ -104,48 +106,79 @@ chamge_amqp_arbiter_backend_enroll (ChamgeArbiterBackend * arbiter_backend)
 
   amqp_channel = g_settings_get_int (self->settings, "amqp-channel");
 
-  amqp_parse_url (amqp_uri, &amqp_c_info);
+  if (amqp_parse_url (amqp_uri, &amqp_c_info) != AMQP_STATUS_OK) {
+    g_error ("url parsing failure");
+    goto out;
+  }
 
   g_debug ("parsed amqp uri (host: %s, vhost: %s)", amqp_c_info.host,
       amqp_c_info.vhost);
 
-  amqp_socket_open (self->amqp_socket, amqp_c_info.host, amqp_c_info.port);
+  if (amqp_socket_open (self->amqp_socket, amqp_c_info.host, amqp_c_info.port)) {
+    g_error ("socket open failure >> host : %s, port : %d", amqp_c_info.host,
+        amqp_c_info.port);
+    goto out;
+  }
 
   /*
    * TODO: The authentication method should be EXTERNAL
    * if we don't want to share user/passwd
    */
-  amqp_login (self->amqp_conn, amqp_c_info.vhost, 0, 131072, 0,
+  amqp_r = amqp_login (self->amqp_conn, amqp_c_info.vhost, 0, 131072, 0,
       AMQP_SASL_METHOD_PLAIN, amqp_c_info.user, amqp_c_info.password);
-  amqp_channel_open (self->amqp_conn, amqp_channel);
+  if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+    g_error ("login failure >> %s", _amqp_get_rpc_reply_string (amqp_r));
+    goto out;
+  }
+  if (!amqp_channel_open (self->amqp_conn, amqp_channel)) {
+    g_error ("channel open failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_get_rpc_reply (self->amqp_conn)));
+    goto out;
+  }
   amqp_get_rpc_reply (self->amqp_conn);
 
   amqp_enroll_q_name =
       g_settings_get_string (self->settings, "enroll-queue-name");
   queue = amqp_cstring_bytes (amqp_enroll_q_name);
-  amqp_r =
+  amqp_declare_r =
       amqp_queue_declare (self->amqp_conn, amqp_channel, queue, 0, 0, 0, 1,
       amqp_empty_table);
+
+  if (amqp_declare_r == NULL) {
+    g_error ("queue declare failure >> %s queue is already exist",
+        amqp_enroll_q_name);
+    return CHAMGE_RETURN_FAIL;
+  }
   amqp_get_rpc_reply (self->amqp_conn);
 
-  g_debug ("declaring a queue : %s", (gchar *) amqp_r->queue.bytes);
+  g_debug ("declaring a queue : %s", (gchar *) amqp_declare_r->queue.bytes);
 
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
 
-  amqp_queue_bind (self->amqp_conn, amqp_channel, amqp_r->queue,
-      amqp_cstring_bytes (amqp_exchange_name), queue, amqp_empty_table);
+  if (!amqp_queue_bind (self->amqp_conn, amqp_channel, amqp_declare_r->queue,
+          amqp_cstring_bytes (amqp_exchange_name), queue, amqp_empty_table)) {
+    g_error ("queue bind failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_get_rpc_reply (self->amqp_conn)));
+    goto out;
+  }
 
   g_debug ("binding a queue (exchange: %s, bind_key: %s)", amqp_exchange_name,
       amqp_enroll_q_name);
 
   /* FIXME: A empty consuming MUST be called after binding, but it blocks until
      a message is coming. This consuming call should be revised to accept timeout */
-  amqp_basic_consume (self->amqp_conn, amqp_channel, amqp_r->queue,
-      amqp_empty_bytes, 0, 0, 0, amqp_empty_table);
+  if (amqp_basic_consume (self->amqp_conn, amqp_channel, amqp_declare_r->queue,
+          amqp_empty_bytes, 0, 0, 0, amqp_empty_table) == NULL) {
+    g_error ("basic consume failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_get_rpc_reply (self->amqp_conn)));
+    goto out;
+  }
   amqp_get_rpc_reply (self->amqp_conn);
+  ret = CHAMGE_RETURN_OK;
 
-  return CHAMGE_RETURN_OK;
+out:
+  return ret;
 }
 
 static ChamgeReturn
@@ -487,7 +520,6 @@ _handle_rpc_user_command (amqp_connection_state_t amqp_conn, gint channel,
         "json parsing failure to get \"to\"");
     return CHAMGE_RETURN_FAIL;
   }
-  amqp_cstring_bytes (queue_name);
 
   g_debug ("queue name : %s ", queue_name);
   amqp_declar_r =
