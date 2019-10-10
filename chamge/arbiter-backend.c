@@ -369,7 +369,6 @@ chamge_arbiter_backend_set_hub_handler (ChamgeArbiterBackend * self,
   g_clear_pointer (&priv->hub_delisted, g_closure_unref);
 
   if (hub_enrolled != NULL) {
-    g_debug ("set hub enrolled : %p", hub_enrolled);
     priv->hub_enrolled = g_cclosure_new (G_CALLBACK (hub_enrolled), self, NULL);
     g_closure_set_marshal (priv->hub_enrolled, g_cclosure_marshal_generic);
   }
