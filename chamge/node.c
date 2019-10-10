@@ -213,6 +213,8 @@ enroll_by_uid_group_func (gpointer user_data)
   g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (klass->enroll != NULL, G_SOURCE_REMOVE);
+  g_return_val_if_fail (priv->state == CHAMGE_NODE_STATE_NULL,
+      CHAMGE_RETURN_FAIL);
   ret = klass->enroll (self);
 
   if (ret == CHAMGE_RETURN_OK) {
@@ -235,6 +237,8 @@ chamge_node_enroll (ChamgeNode * self, gboolean lazy)
   g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (priv->state == CHAMGE_NODE_STATE_NULL,
+      CHAMGE_RETURN_FAIL);
 
   klass = CHAMGE_NODE_GET_CLASS (self);
 
@@ -314,6 +318,8 @@ chamge_node_activate (ChamgeNode * self)
   g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (priv->state == CHAMGE_NODE_STATE_ENROLLED,
+      CHAMGE_RETURN_FAIL);
 
   klass = CHAMGE_NODE_GET_CLASS (self);
   g_return_val_if_fail (klass->activate != NULL, CHAMGE_RETURN_FAIL);
@@ -339,6 +345,8 @@ chamge_node_deactivate (ChamgeNode * self)
   g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (priv->state == CHAMGE_NODE_STATE_ACTIVATED,
+      CHAMGE_RETURN_FAIL);
 
   klass = CHAMGE_NODE_GET_CLASS (self);
   g_return_val_if_fail (klass->deactivate != NULL, CHAMGE_RETURN_FAIL);
@@ -379,9 +387,12 @@ chamge_node_user_command (ChamgeNode * self, const gchar * cmd, gchar ** out,
 {
   ChamgeNodeClass *klass;
   ChamgeReturn ret = CHAMGE_RETURN_OK;
+  ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
   g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
+  g_return_val_if_fail (priv->state == CHAMGE_NODE_STATE_ACTIVATED,
+      CHAMGE_RETURN_FAIL);
 
   klass = CHAMGE_NODE_GET_CLASS (self);
   g_return_val_if_fail (klass->user_command != NULL, CHAMGE_RETURN_FAIL);
