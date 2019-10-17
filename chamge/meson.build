@@ -37,6 +37,7 @@ foreach xml: schema_xmls
 endforeach
 
 source_h = [
+  'chamge.h',
   'types.h',
   'node.h',
   'arbiter.h',
