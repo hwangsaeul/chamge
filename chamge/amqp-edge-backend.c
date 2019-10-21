@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include "amqp-edge-backend.h"
+#include "amqp-source.h"
 #include "glib-compat.h"
 
 #include <gio/gio.h>
@@ -532,83 +533,73 @@ out:
 }
 
 static gboolean
-_process_amqp_message (ChamgeAmqpEdgeBackend * self)
+_process_amqp_message (amqp_connection_state_t state, amqp_rpc_reply_t * reply,
+    amqp_envelope_t * envelope, gpointer user_data)
 {
-  amqp_rpc_reply_t amqp_rpc_res;
-  amqp_envelope_t envelope;
+  ChamgeAmqpEdgeBackend *self = user_data;
   g_autofree gchar *reply_queue = NULL;
   g_autofree gchar *correlation_id = NULL;
-  struct timeval timeout = { 1, 0 };
   g_autofree gchar *response = NULL;
 
   if (!self->activated)
     return G_SOURCE_REMOVE;
 
-  amqp_maybe_release_buffers (self->amqp_conn);
-
-  amqp_rpc_res = amqp_consume_message (self->amqp_conn, &envelope, &timeout, 0);
-
-  if (amqp_rpc_res.reply_type == AMQP_RESPONSE_LIBRARY_EXCEPTION
-      && amqp_rpc_res.library_error == AMQP_STATUS_TIMEOUT) {
-    return G_SOURCE_CONTINUE;
-  }
-
-  if (amqp_rpc_res.reply_type != AMQP_RESPONSE_NORMAL) {
-    g_debug ("abnormal response: %x", amqp_rpc_res.reply_type);
+  if (reply->reply_type != AMQP_RESPONSE_NORMAL) {
+    g_debug ("abnormal response: %x", reply->reply_type);
     goto out;
   }
 
-  if (envelope.message.body.bytes == NULL) {
+  if (envelope->message.body.bytes == NULL) {
     g_debug ("no reply queue in request message");
     goto out;
   }
 
   g_debug ("Delivery %u, exchange %.*s routingkey %.*s",
-      (unsigned) envelope.delivery_tag, (int) envelope.exchange.len,
-      (char *) envelope.exchange.bytes, (int) envelope.routing_key.len,
-      (char *) envelope.routing_key.bytes);
+      (unsigned) envelope->delivery_tag, (int) envelope->exchange.len,
+      (char *) envelope->exchange.bytes, (int) envelope->routing_key.len,
+      (char *) envelope->routing_key.bytes);
 
   /* if the content-type isn't 'application/json', let's drop */
-  if (!(envelope.message.properties._flags & AMQP_BASIC_CONTENT_TYPE_FLAG)
+  if (!(envelope->message.properties._flags & AMQP_BASIC_CONTENT_TYPE_FLAG)
       || strlen (DEFAULT_CONTENT_TYPE) !=
-      envelope.message.properties.content_type.len
+      envelope->message.properties.content_type.len
       || g_ascii_strncasecmp (DEFAULT_CONTENT_TYPE,
-          envelope.message.properties.content_type.bytes,
-          envelope.message.properties.content_type.len)
+          envelope->message.properties.content_type.bytes,
+          envelope->message.properties.content_type.len)
       ) {
     g_debug ("invalid content type %s",
-        (gchar *) envelope.message.properties.content_type.bytes);
+        (gchar *) envelope->message.properties.content_type.bytes);
 
     goto out;
   }
 
-  if ((envelope.message.properties._flags & AMQP_BASIC_REPLY_TO_FLAG) &&
-      envelope.message.properties.reply_to.len > 0 &&
-      (strlen (envelope.message.properties.reply_to.bytes) >=
-          envelope.message.properties.reply_to.len)) {
-    reply_queue = g_strndup (envelope.message.properties.reply_to.bytes,
-        envelope.message.properties.reply_to.len);
+  if ((envelope->message.properties._flags & AMQP_BASIC_REPLY_TO_FLAG) &&
+      envelope->message.properties.reply_to.len > 0 &&
+      (strlen (envelope->message.properties.reply_to.bytes) >=
+          envelope->message.properties.reply_to.len)) {
+    reply_queue = g_strndup (envelope->message.properties.reply_to.bytes,
+        envelope->message.properties.reply_to.len);
   } else {
     g_debug ("not exist replay_to in request message's property");
     goto out;
   }
 
-  if ((envelope.message.properties._flags & AMQP_BASIC_CORRELATION_ID_FLAG) &&
-      envelope.message.properties.correlation_id.len > 0 &&
-      (strlen (envelope.message.properties.correlation_id.bytes) >=
-          envelope.message.properties.correlation_id.len)) {
+  if ((envelope->message.properties._flags & AMQP_BASIC_CORRELATION_ID_FLAG) &&
+      envelope->message.properties.correlation_id.len > 0 &&
+      (strlen (envelope->message.properties.correlation_id.bytes) >=
+          envelope->message.properties.correlation_id.len)) {
     correlation_id =
-        g_strndup (envelope.message.properties.correlation_id.bytes,
-        envelope.message.properties.correlation_id.len);
+        g_strndup (envelope->message.properties.correlation_id.bytes,
+        envelope->message.properties.correlation_id.len);
   }
 
   g_debug ("Content-type: %.*s, replay_to : %s, correlation_id : %s",
-      (int) envelope.message.properties.content_type.len,
-      (char *) envelope.message.properties.content_type.bytes,
+      (int) envelope->message.properties.content_type.len,
+      (char *) envelope->message.properties.content_type.bytes,
       reply_queue, correlation_id);
 
-  response = _process_json_message (self, envelope.message.body.bytes,
-      envelope.message.body.len);
+  response = _process_json_message (self, envelope->message.body.bytes,
+      envelope->message.body.len);
 
   if (response == NULL) {
     g_error ("response is NULL. response should be non null");
@@ -631,16 +622,14 @@ _process_amqp_message (ChamgeAmqpEdgeBackend * self)
     /*
      * publish
      */
-    g_debug ("publishing to [%s] channel [%d]", reply_queue, envelope.channel);
+    g_debug ("publishing to [%s] channel [%d]", reply_queue, envelope->channel);
     g_debug ("      correlation id [%s] body [%s]", correlation_id, response);
-    amqp_basic_publish (self->amqp_conn, envelope.channel,
+    amqp_basic_publish (self->amqp_conn, envelope->channel,
         amqp_cstring_bytes (""), amqp_cstring_bytes (reply_queue), 0, 0,
         &amqp_props, amqp_cstring_bytes (response));
   }
 
 out:
-  amqp_destroy_envelope (&envelope);
-
   return G_SOURCE_CONTINUE;
 }
 
@@ -710,7 +699,9 @@ chamge_amqp_edge_backend_activate (ChamgeEdgeBackend * edge_backend)
     goto out;
   }
   /* process amqp message that comes from Mujachi */
-  self->process_id = g_idle_add ((GSourceFunc) _process_amqp_message, self);
+  self->process_id = chamge_amqp_add_watch (self->amqp_conn,
+      _process_amqp_message, self);
+
   ret = CHAMGE_RETURN_OK;
 
 out:
