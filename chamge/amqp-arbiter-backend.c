@@ -523,7 +523,7 @@ _handle_rpc_user_command (amqp_connection_state_t amqp_conn, gint channel,
 
   g_debug ("queue name : %s ", queue_name);
   amqp_declar_r =
-      amqp_queue_declare (amqp_conn, 1, amqp_empty_bytes, 0, 0, 0,
+      amqp_queue_declare (amqp_conn, channel, amqp_empty_bytes, 0, 0, 0,
       1, amqp_empty_table);
   if (amqp_declar_r == NULL) {
     g_set_error (error, CHAMGE_BACKEND_ERROR,
@@ -571,8 +571,8 @@ _handle_rpc_user_command (amqp_connection_state_t amqp_conn, gint channel,
   }
 
   /* wait an answer */
-  if (amqp_basic_consume (amqp_conn, 1, amqp_reply_queue, amqp_empty_bytes, 0,
-          1, 0, amqp_empty_table) == NULL) {
+  if (amqp_basic_consume (amqp_conn, channel, amqp_reply_queue,
+          amqp_empty_bytes, 0, 1, 0, amqp_empty_table) == NULL) {
     g_set_error (error, CHAMGE_BACKEND_ERROR,
         CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "basic consume failure >> %s",
         _amqp_get_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
@@ -680,6 +680,9 @@ chamge_amqp_arbiter_backend_user_command (ChamgeArbiterBackend *
   amqp_channel = g_settings_get_int (self->settings, "amqp-channel");
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
+
+  g_debug ("[config] channel : %d, enroll-exchange-name : %s",
+      amqp_channel, amqp_exchange_name);
 
   amqp_conn = amqp_new_connection ();
   amqp_socket = amqp_tcp_socket_new (amqp_conn);

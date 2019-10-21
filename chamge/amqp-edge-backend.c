@@ -163,7 +163,7 @@ out:
 }
 
 static ChamgeReturn
-_amqp_declare_queue (const amqp_connection_state_t conn,
+_amqp_declare_queue (const amqp_connection_state_t conn, guint channel,
     const gchar * queue_name, amqp_bytes_t * queue, GError ** error)
 {
   amqp_queue_declare_ok_t *amqp_declar_r = NULL;
@@ -172,12 +172,13 @@ _amqp_declare_queue (const amqp_connection_state_t conn,
   g_return_val_if_fail (conn != NULL, CHAMGE_RETURN_FAIL);
 
   if (queue_name == NULL) {
-    amqp_declar_r = amqp_queue_declare (conn, 1, amqp_empty_bytes, 0, 0, 0, 1,
+    amqp_declar_r =
+        amqp_queue_declare (conn, channel, amqp_empty_bytes, 0, 0, 0, 1,
         amqp_empty_table);
   } else {
     amqp_declar_r =
-        amqp_queue_declare (conn, 1, amqp_cstring_bytes (queue_name), 0, 0, 0,
-        1, amqp_empty_table);
+        amqp_queue_declare (conn, channel, amqp_cstring_bytes (queue_name), 0,
+        0, 0, 1, amqp_empty_table);
   }
   if (amqp_declar_r == NULL) {
     g_set_error (error, CHAMGE_BACKEND_ERROR,
@@ -215,7 +216,7 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
   g_return_val_if_fail (response_body != NULL, CHAMGE_RETURN_FAIL);
 
   /* create private replay_to_queue and queue name is random that is supplied from amqp server */
-  if (_amqp_declare_queue (amqp_conn, NULL,
+  if (_amqp_declare_queue (amqp_conn, channel, NULL,
           &amqp_reply_queue, error) != CHAMGE_RETURN_OK)
     return ret;
 
@@ -255,8 +256,8 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
         exchange, request);
   }
 
-  if (amqp_basic_consume (amqp_conn, 1, amqp_reply_queue, amqp_empty_bytes, 0,
-          1, 0, amqp_empty_table) == NULL) {
+  if (amqp_basic_consume (amqp_conn, channel, amqp_reply_queue,
+          amqp_empty_bytes, 0, 1, 0, amqp_empty_table) == NULL) {
     g_set_error (error, CHAMGE_BACKEND_ERROR,
         CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "basic consume failure >> %s",
         _amqp_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
@@ -355,8 +356,8 @@ _amqp_rpc_subscribe (amqp_connection_state_t amqp_conn, guint channel,
   g_return_val_if_fail (channel != 0, CHAMGE_RETURN_FAIL);
   g_return_val_if_fail (queue_name != 0, CHAMGE_RETURN_FAIL);
 
-  if (_amqp_declare_queue (amqp_conn, queue_name, &amqp_listen_queue, error) !=
-      CHAMGE_RETURN_OK) {
+  if (_amqp_declare_queue (amqp_conn, channel, queue_name, &amqp_listen_queue,
+          error) != CHAMGE_RETURN_OK) {
     return CHAMGE_RETURN_FAIL;
   }
   if (g_strcmp0 (queue_name, amqp_listen_queue.bytes) != 0) {
@@ -460,6 +461,10 @@ chamge_amqp_edge_backend_enroll (ChamgeEdgeBackend * edge_backend)
       g_settings_get_string (self->settings, "enroll-queue-name");
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
+
+  g_debug
+      ("[config] channel : %d, enroll-queue-name : %s, enroll-exchange-name : %s",
+      amqp_channel, amqp_enroll_q_name, amqp_exchange_name);
 
   if (_amqp_rpc_login (self->amqp_conn, self->amqp_socket,
           amqp_uri, amqp_channel, &error) != CHAMGE_RETURN_OK) {
