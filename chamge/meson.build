@@ -63,6 +63,7 @@ source_c = [
   'hub-backend.c',
   'mock-hub-backend.c',
   'amqp-hub-backend.c',
+  'amqp-source.c',
 ]
 
 install_headers(source_h, subdir: chamge_install_header_subdir)
