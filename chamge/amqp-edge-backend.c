@@ -258,7 +258,7 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
   }
 
   if (amqp_basic_consume (amqp_conn, channel, amqp_reply_queue,
-          amqp_empty_bytes, 0, 0, 0, amqp_empty_table) == NULL) {
+          amqp_empty_bytes, 0, 1, 0, amqp_empty_table) == NULL) {
     g_set_error (error, CHAMGE_BACKEND_ERROR,
         CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "basic consume failure >> %s",
         _amqp_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
@@ -381,7 +381,7 @@ _amqp_rpc_subscribe (amqp_connection_state_t amqp_conn, guint channel,
       queue_name, exchange_name, queue_name);
 
   if (amqp_basic_consume (amqp_conn, channel, amqp_queue,
-          amqp_empty_bytes, 0, 0, 0, amqp_empty_table) == NULL) {
+          amqp_empty_bytes, 0, 1, 0, amqp_empty_table) == NULL) {
     g_set_error (error, CHAMGE_BACKEND_ERROR,
         CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "basic consume failure >> %s",
         _amqp_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
