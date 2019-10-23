@@ -169,7 +169,7 @@ chamge_amqp_arbiter_backend_enroll (ChamgeArbiterBackend * arbiter_backend)
   /* FIXME: A empty consuming MUST be called after binding, but it blocks until
      a message is coming. This consuming call should be revised to accept timeout */
   if (amqp_basic_consume (self->amqp_conn, amqp_channel, amqp_declare_r->queue,
-          amqp_empty_bytes, 0, 0, 0, amqp_empty_table) == NULL) {
+          amqp_empty_bytes, 0, 1, 0, amqp_empty_table) == NULL) {
     g_error ("basic consume failure >> %s",
         _amqp_get_rpc_reply_string (amqp_get_rpc_reply (self->amqp_conn)));
     goto out;
