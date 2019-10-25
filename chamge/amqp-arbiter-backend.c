@@ -328,6 +328,33 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
   return response;
 }
 
+static ChamgeReturn
+_is_queue_existed (const amqp_connection_state_t conn, guint channel,
+    const gchar * queue_name, GError ** error)
+{
+  amqp_queue_declare_ok_t *amqp_declar_r = NULL;
+
+  g_return_val_if_fail (conn != NULL, CHAMGE_RETURN_FAIL);
+
+  if (queue_name == NULL) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "queue name is null");
+    return CHAMGE_RETURN_FAIL;
+  } else {
+    amqp_declar_r =
+        amqp_queue_declare (conn, channel, amqp_cstring_bytes (queue_name), 1,
+        0, 0, 1, amqp_empty_table);
+  }
+  if (amqp_declar_r == NULL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+        "passive queue declare failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_get_rpc_reply (conn)));
+    return CHAMGE_RETURN_FAIL;
+  }
+  return CHAMGE_RETURN_OK;
+}
+
 static gboolean
 _process_amqp_message (ChamgeAmqpArbiterBackend * self)
 {
@@ -425,6 +452,15 @@ _process_amqp_message (ChamgeAmqpArbiterBackend * self)
       amqp_props.correlation_id = amqp_cstring_bytes (correlation_id);
     }
 
+    {
+      g_autoptr (GError) error = NULL;
+      if (_is_queue_existed (self->amqp_conn, envelope.channel, reply_queue,
+              &error)) {
+        g_debug ("%s", error ? error->message : "there is no queue for reply");
+        goto out;
+      }
+    }
+
     /*
      * publish
      */
@@ -519,6 +555,12 @@ _handle_rpc_user_command (amqp_connection_state_t amqp_conn, gint channel,
         CHAMGE_BACKEND_ERROR_MISSING_PARAMETER,
         "json parsing failure to get \"to\"");
     return CHAMGE_RETURN_FAIL;
+  }
+
+  /* check where queue_name queue exist */
+  if (_is_queue_existed (amqp_conn, channel, queue_name,
+          error) != CHAMGE_RETURN_OK) {
+    goto out;
   }
 
   g_debug ("queue name : %s ", queue_name);
