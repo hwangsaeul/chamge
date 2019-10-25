@@ -200,6 +200,33 @@ _amqp_declare_queue (const amqp_connection_state_t conn, guint channel,
 }
 
 static ChamgeReturn
+_is_queue_existed (const amqp_connection_state_t conn, guint channel,
+    const gchar * queue_name, GError ** error)
+{
+  amqp_queue_declare_ok_t *amqp_declar_r = NULL;
+
+  g_return_val_if_fail (conn != NULL, CHAMGE_RETURN_FAIL);
+
+  if (queue_name == NULL) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "queue name is null");
+    return CHAMGE_RETURN_FAIL;
+  } else {
+    amqp_declar_r =
+        amqp_queue_declare (conn, channel, amqp_cstring_bytes (queue_name), 1,
+        0, 0, 1, amqp_empty_table);
+  }
+  if (amqp_declar_r == NULL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+        "passive queue declare failure >> %s",
+        _amqp_rpc_reply_string (amqp_get_rpc_reply (conn)));
+    return CHAMGE_RETURN_FAIL;
+  }
+  return CHAMGE_RETURN_OK;
+}
+
+static ChamgeReturn
 _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
     const gchar * request, const gchar * exchange, const gchar * queue_name,
     gchar ** response_body, GError ** error)
@@ -215,6 +242,12 @@ _amqp_rpc_request (amqp_connection_state_t amqp_conn, guint channel,
   g_return_val_if_fail (queue_name != NULL, CHAMGE_RETURN_FAIL);
   g_return_val_if_fail (request != NULL, CHAMGE_RETURN_FAIL);
   g_return_val_if_fail (response_body != NULL, CHAMGE_RETURN_FAIL);
+
+  /* check where queue_name queue exist */
+  if (_is_queue_existed (amqp_conn, channel, queue_name,
+          error) != CHAMGE_RETURN_OK) {
+    goto out;
+  }
 
   /* create private replay_to_queue and queue name is random that is supplied from amqp server */
   if (_amqp_declare_queue (amqp_conn, channel, NULL,
@@ -617,6 +650,15 @@ _process_amqp_message (amqp_connection_state_t state, amqp_rpc_reply_t * reply,
     if (correlation_id != NULL) {
       amqp_props._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
       amqp_props.correlation_id = amqp_cstring_bytes (correlation_id);
+    }
+
+    {
+      g_autoptr (GError) error = NULL;
+      if (_is_queue_existed (self->amqp_conn, envelope->channel, reply_queue,
+              &error)) {
+        g_debug ("%s", error ? error->message : "there is no queue for reply");
+        goto out;
+      }
     }
 
     /*
