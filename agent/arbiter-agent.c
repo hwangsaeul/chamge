@@ -327,7 +327,13 @@ chamge_arbiter_agent_handle_user_command (ChamgeDBusArbiterManager *
       chamge_node_user_command (CHAMGE_NODE (self->arbiter),
       (gchar *) final_cmd, &response, &error);
   if (ret != CHAMGE_RETURN_OK) {
-    g_error ("arbiter user command failure >> %s", error ? error->message : "");
+    g_warning ("arbiter user command failure >> %s",
+        error ? error->message : "");
+    if (response == NULL) {
+      response =
+          g_strdup_printf ("{\"result\":\"%s\"}",
+          error ? error->message : "nok");
+    }
   }
 out:
   g_debug ("response >> %s (%d)", response, ret);
