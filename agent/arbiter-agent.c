@@ -275,7 +275,7 @@ chamge_arbiter_agent_handle_user_command (ChamgeDBusArbiterManager *
   ChamgeArbiterAgent *self = (ChamgeArbiterAgent *) user_data;
   ChamgeReturn ret = CHAMGE_RETURN_FAIL;
   g_autofree gchar *response = NULL;
-  GError *error = NULL;
+  g_autoptr (GError) error = NULL;
 
   JsonNode *root = NULL;
   JsonObject *json_object = NULL;
