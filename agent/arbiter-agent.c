@@ -303,7 +303,8 @@ chamge_arbiter_agent_handle_user_command (ChamgeDBusArbiterManager *
     const gchar *method = json_node_get_string (node);
     /* send to edge */
     if (!g_strcmp0 (method, "streamingStart")
-        || !g_strcmp0 (method, "streamingStop")) {
+        || !g_strcmp0 (method, "streamingStop")
+        || !g_strcmp0 (method, "getUrl")) {
       g_debug ("command for edge");
     } else {
       g_debug ("command is not for edge");
