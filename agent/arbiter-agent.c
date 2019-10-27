@@ -428,38 +428,80 @@ handle_local_options (GApplication * app, GVariantDict * options,
   return -1;                    /* continue to prcess */
 }
 
+static GList *
+_find_list (GList * list, const char *id)
+{
+  GList *edge;
+
+  /* TODO : if the number of egde increase huge, it should be improved */
+  for (edge = list; edge != NULL; edge = g_list_next (edge)) {
+    const gchar *data = (gchar *) edge->data;
+    if (!g_strcmp0 (id, data)) {
+      g_debug ("found id (%s) in enrolled list.", id);
+      return edge;
+    }
+  }
+  return NULL;
+}
+
 void
 edge_enrolled_cb (ChamgeArbiter * arbiter, const gchar * edge_id,
     ChamgeArbiterAgent * agent)
 {
-  /* TODO : need to implement */
-  printf ("[DUMMY] edge enroll callback >> edge_id: %s\n", edge_id);
-  agent->edges = g_list_insert (agent->edges, g_strdup (edge_id), 0);
+  GList *edge = _find_list (agent->edges, edge_id);
+
+  printf ("[AGENT] edge enroll callback >> edge_id: %s\n", edge_id);
+  if (!edge) {
+    agent->edges = g_list_append (agent->edges, g_strdup (edge_id));
+  } else {
+    g_debug ("edge_id is duplicated. already enrolled.");
+  }
 }
 
 void
 edge_delisted_cb (ChamgeArbiter * arbiter, const gchar * edge_id,
     ChamgeArbiterAgent * agent)
 {
-  /* TODO : need to implement */
-  printf ("[DUMMY] edge delisted callback >>  edge_id: %s\n", edge_id);
+  GList *edge = _find_list (agent->edges, edge_id);
+
+  printf ("[AGENT] edge delisted callback >>  edge_id: %s\n", edge_id);
+  if (edge) {
+    g_free (edge->data);
+    agent->edges = g_list_delete_link (agent->edges, edge);
+  } else {
+    g_debug ("edge_id %s is not enrolled.", edge_id);
+  }
+
 }
 
 void
 hub_enrolled_cb (ChamgeArbiter * arbiter, const gchar * hub_id,
     ChamgeArbiterAgent * agent)
 {
-  /* TODO : need to implement */
-  printf ("[DUMMY] hub enroll callback >> hub_id: %s\n", hub_id);
-  agent->hubs = g_list_insert (agent->hubs, g_strdup (hub_id), 0);
+  GList *hub = _find_list (agent->hubs, hub_id);
+
+  printf ("[AGENT] hub enroll callback >> hub_id: %s\n", hub_id);
+  if (!hub) {
+    agent->hubs = g_list_append (agent->hubs, g_strdup (hub_id));
+  } else {
+    g_debug ("hub_id is duplicated. already enrolled.");
+  }
+
 }
 
 void
 hub_delisted_cb (ChamgeArbiter * arbiter, const gchar * hub_id,
     ChamgeArbiterAgent * agent)
 {
-  /* TODO : need to implement */
-  printf ("[DUMMY] hub delisted callback  >> hub_id: %s\n", hub_id);
+  GList *hub = _find_list (agent->hubs, hub_id);
+
+  printf ("[AGENT] hub delisted callback  >> hub_id: %s\n", hub_id);
+  if (hub) {
+    g_free (hub->data);
+    agent->hubs = g_list_delete_link (agent->hubs, hub);
+  } else {
+    g_debug ("hub_id %s is not enrolled.", hub_id);
+  }
 
 }
 
