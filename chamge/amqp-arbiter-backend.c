@@ -301,7 +301,7 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
     } else if (!g_strcmp0 (method, "activate")) {
       _handle_edge_activate (self, uid);
       response = g_strdup ("{\"result\":\"activated\"}");
-    } else if (!g_strcmp0 (method, "deactdivate")) {
+    } else if (!g_strcmp0 (method, "deactivate")) {
       _handle_edge_deactivate (self, uid);
       response = g_strdup ("{\"result\":\"deactivated\"}");
     } else if (!g_strcmp0 (method, "delist")) {
@@ -327,7 +327,7 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
     } else if (!g_strcmp0 (method, "activate")) {
       _handle_hub_activate (self, uid);
       response = g_strdup ("{\"result\":\"activated\"}");
-    } else if (!g_strcmp0 (method, "deactdivate")) {
+    } else if (!g_strcmp0 (method, "deactivate")) {
       _handle_hub_deactivate (self, uid);
       response = g_strdup ("{\"result\":\"deactivated\"}");
     } else if (!g_strcmp0 (method, "delist")) {
