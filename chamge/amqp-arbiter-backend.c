@@ -205,6 +205,12 @@ _handle_edge_activate (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
 static void
 _handle_edge_deactivate (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
 {
+  /* TODO : nothing to do now */
+}
+
+static void
+_handle_edge_delist (ChamgeAmqpArbiterBackend * self, const gchar * edge_id)
+{
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
 
   if (klass->edge_delisted != NULL)
@@ -228,6 +234,12 @@ _handle_hub_activate (ChamgeAmqpArbiterBackend * self, const gchar * hub_id)
 
 static void
 _handle_hub_deactivate (ChamgeAmqpArbiterBackend * self, const gchar * hub_id)
+{
+  /* TODO : nothing to do now */
+}
+
+static void
+_handle_hub_delist (ChamgeAmqpArbiterBackend * self, const gchar * hub_id)
 {
   ChamgeArbiterBackendClass *klass = CHAMGE_ARBITER_BACKEND_GET_CLASS (self);
 
@@ -292,6 +304,9 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
     } else if (!g_strcmp0 (method, "deactdivate")) {
       _handle_edge_deactivate (self, uid);
       response = g_strdup ("{\"result\":\"deactivated\"}");
+    } else if (!g_strcmp0 (method, "delist")) {
+      _handle_edge_delist (self, uid);
+      response = g_strdup ("{\"result\":\"delisted\"}");
     } else {
       response =
           g_strdup_printf ("{\"result\":\"method(%s) is not supported\"}",
@@ -315,6 +330,9 @@ _process_json_message (ChamgeAmqpArbiterBackend * self, const gchar * body,
     } else if (!g_strcmp0 (method, "deactdivate")) {
       _handle_hub_deactivate (self, uid);
       response = g_strdup ("{\"result\":\"deactivated\"}");
+    } else if (!g_strcmp0 (method, "delist")) {
+      _handle_hub_delist (self, uid);
+      response = g_strdup ("{\"result\":\"delisted\"}");
     } else {
       response =
           g_strdup_printf ("{\"result\":\"method(%s) is not supported\"}",
