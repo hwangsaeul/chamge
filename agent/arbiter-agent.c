@@ -268,6 +268,20 @@ chamge_arbiter_agent_handle_deactivate (ChamgeDBusArbiterManager * manager,
 }
 
 static gboolean
+_is_enrolled (GList * list, const char *id)
+{
+  GList *edge;
+  for (edge = list; edge != NULL; edge = g_list_next (edge)) {
+    const gchar *data = (gchar *) edge->data;
+    if (!g_strcmp0 (id, data)) {
+      g_debug ("found id (%s) in enrolled list.", id);
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+static gboolean
 chamge_arbiter_agent_handle_user_command (ChamgeDBusArbiterManager *
     manager, GDBusMethodInvocation * invocation, gchar * user_cmd,
     gpointer user_data)
@@ -306,19 +320,33 @@ chamge_arbiter_agent_handle_user_command (ChamgeDBusArbiterManager *
         || !g_strcmp0 (method, "streamingStop")
         || !g_strcmp0 (method, "getUrl")) {
       g_debug ("command for edge");
+      if (json_object_has_member (json_object, "to")) {
+        const gchar *edge_id =
+            json_node_get_string (json_object_get_member (json_object, "to"));
+        gboolean enrolled = _is_enrolled (self->edges, edge_id);
+
+        if (!enrolled) {
+          g_debug ("no edge (%s) is enrolled.\n", edge_id);
+          response =
+              g_strdup_printf
+              ("{\"result\":\"no edge is enrolled with edge id %s\"}", edge_id);
+          goto out;
+
+        }
+      }
     } else {
       g_debug ("command is not for edge");
       if (json_object_has_member (json_object, "to")) {
-        const gchar *hub_id = NULL;
+        const gchar *hub_id =
+            json_node_get_string (json_object_get_member (json_object, "to"));
+        gboolean enrolled = _is_enrolled (self->hubs, hub_id);
 
-        hub_id = (gchar *) g_list_nth_data (self->hubs, 0);
-        if (hub_id == NULL) {
-          printf ("no hub is enrolled\n");
-        } else {
-          json_object_set_string_member (json_object, "to", hub_id);
-          final_cmd = json_to_string (root, FALSE);
-          g_debug ("cmd changed from %s", user_cmd);
-          g_debug ("              to %s", final_cmd);
+        if (!enrolled) {
+          g_debug ("no hub (%s) is enrolled\n", hub_id);
+          response =
+              g_strdup_printf
+              ("{\"result\":\"no hub is enrolled with hub id %s\"}", hub_id);
+          goto out;
         }
       }
     }
