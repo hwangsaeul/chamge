@@ -526,9 +526,73 @@ out:
 }
 
 static ChamgeReturn
-chamge_amqp_hub_backend_delist (ChamgeHubBackend * self)
+chamge_amqp_hub_backend_delist (ChamgeHubBackend * hub_backend)
 {
-  return CHAMGE_RETURN_OK;
+  g_autofree gchar *amqp_enroll_q_name = NULL;
+  g_autofree gchar *amqp_exchange_name = NULL;
+  g_autofree gchar *request_body = NULL;
+  g_autofree gchar *response_body = NULL;
+  guint amqp_channel = 1;
+
+  g_autofree gchar *hub_id = NULL;
+  ChamgeHub *hub = NULL;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  g_autoptr (GError) error = NULL;
+
+  ChamgeAmqpHubBackend *self = CHAMGE_AMQP_HUB_BACKEND (hub_backend);
+
+  g_object_get (self, "hub", &hub, NULL);
+
+  if (hub == NULL) {
+    g_error ("failed to get hub");
+    goto out;
+  }
+
+  if (chamge_node_get_uid (CHAMGE_NODE (hub), &hub_id) != CHAMGE_RETURN_OK) {
+    g_error ("failed to get hub_id from node(parent)");
+    goto out;
+  }
+
+  amqp_channel = g_settings_get_int (self->settings, "amqp-channel");
+  amqp_enroll_q_name =
+      g_settings_get_string (self->settings, "enroll-queue-name");
+  amqp_exchange_name =
+      g_settings_get_string (self->settings, "enroll-exchange-name");
+
+  /* send delist */
+  request_body =
+      g_strdup_printf
+      ("{\"method\":\"delist\",\"deviceType\":\"hub\",\"hubId\":\"%s\"}",
+      hub_id);
+  if (_amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
+          amqp_exchange_name, amqp_enroll_q_name, &response_body,
+          &error) != CHAMGE_RETURN_OK) {
+    if (error != NULL)
+      g_debug ("rpc_request ERROR : %s", error->message);
+    goto out;
+  }
+
+  g_debug ("received response to delist: %s", response_body);
+
+  if (_validate_response (response_body, "delisted") != CHAMGE_RETURN_OK) {
+    g_debug ("  received reponse must be [delisted], but [%s]", response_body);
+    goto out;
+  }
+
+  /* subscribe queue (queue name: hubId) for streaming start */
+  if (_amqp_rpc_subscribe (self->amqp_conn, amqp_channel, amqp_exchange_name,
+          hub_id, &error) == CHAMGE_RETURN_FAIL) {
+    g_debug ("rpc_subscribe ERROR [ch:%d][exchange:%s][hub_id:%s]",
+        amqp_channel, amqp_exchange_name, hub_id);
+    if (error != NULL)
+      g_debug ("    %s", error->message);
+    goto out;
+  }
+
+  ret = CHAMGE_RETURN_OK;
+
+out:
+  return ret;
 }
 
 static gchar *
