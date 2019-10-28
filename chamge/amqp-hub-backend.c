@@ -579,16 +579,6 @@ chamge_amqp_hub_backend_delist (ChamgeHubBackend * hub_backend)
     goto out;
   }
 
-  /* subscribe queue (queue name: hubId) for streaming start */
-  if (_amqp_rpc_subscribe (self->amqp_conn, amqp_channel, amqp_exchange_name,
-          hub_id, &error) == CHAMGE_RETURN_FAIL) {
-    g_debug ("rpc_subscribe ERROR [ch:%d][exchange:%s][hub_id:%s]",
-        amqp_channel, amqp_exchange_name, hub_id);
-    if (error != NULL)
-      g_debug ("    %s", error->message);
-    goto out;
-  }
-
   ret = CHAMGE_RETURN_OK;
 
 out:
