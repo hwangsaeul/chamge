@@ -535,21 +535,25 @@ out:
 static ChamgeReturn
 chamge_amqp_edge_backend_delist (ChamgeEdgeBackend * edge_backend)
 {
+  ChamgeAmqpEdgeBackend *self = CHAMGE_AMQP_EDGE_BACKEND (edge_backend);
+  g_autofree gchar *amqp_uri = NULL;
+  struct amqp_connection_info connection_info;
+  amqp_rpc_reply_t amqp_r;
+  amqp_connection_state_t amqp_conn;
+  amqp_socket_t *amqp_socket = NULL;
+
   g_autofree gchar *amqp_enroll_q_name = NULL;
   g_autofree gchar *amqp_exchange_name = NULL;
+  gint amqp_channel = 0;
   g_autofree gchar *request_body = NULL;
   g_autofree gchar *response_body = NULL;
-  guint amqp_channel = 1;
 
-  g_autofree gchar *edge_id = NULL;
   ChamgeEdge *edge = NULL;
-  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  g_autofree gchar *edge_id = NULL;
   g_autoptr (GError) error = NULL;
-
-  ChamgeAmqpEdgeBackend *self = CHAMGE_AMQP_EDGE_BACKEND (edge_backend);
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
 
   g_object_get (self, "edge", &edge, NULL);
-
   if (edge == NULL) {
     g_error ("failed to get edge");
     goto out;
@@ -560,18 +564,59 @@ chamge_amqp_edge_backend_delist (ChamgeEdgeBackend * edge_backend)
     goto out;
   }
 
+
+  amqp_uri = g_settings_get_string (self->settings, "amqp-uri");
+  g_assert_nonnull (amqp_uri);
+
+  if (amqp_parse_url (amqp_uri, &connection_info) != AMQP_STATUS_OK) {
+    g_debug ("url pasring failure");
+    goto out;
+  }
+
   amqp_channel = g_settings_get_int (self->settings, "amqp-channel");
   amqp_enroll_q_name =
       g_settings_get_string (self->settings, "enroll-queue-name");
   amqp_exchange_name =
       g_settings_get_string (self->settings, "enroll-exchange-name");
 
+  g_debug ("[config] channel : %d, enroll-exchange-name : %s",
+      amqp_channel, amqp_exchange_name);
+
+  amqp_conn = amqp_new_connection ();
+  amqp_socket = amqp_tcp_socket_new (amqp_conn);
+  g_assert_nonnull (amqp_socket);
+
+  if (amqp_socket_open (amqp_socket,
+          connection_info.host, connection_info.port)) {
+    g_debug ("socket open failure");
+    goto out;
+  }
+
+  /* TODO: The authentication method should be EXTERNAL
+   * if we don't want to share user/passwd
+   */
+  amqp_r = amqp_login (amqp_conn, connection_info.vhost, 0, 131072, 0,
+      AMQP_SASL_METHOD_PLAIN, connection_info.user, connection_info.password);
+  if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+    g_debug ("login failure >> %s", _amqp_rpc_reply_string (amqp_r));
+    goto out;
+  }
+  if (!amqp_channel_open (amqp_conn, amqp_channel)) {
+    g_debug ("channel open failure >> %s",
+        _amqp_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
+    goto out;
+  }
+
+  g_debug ("success to login %s:%d/%s id[%s] pwd[%s]",
+      connection_info.host, connection_info.port,
+      connection_info.vhost, connection_info.user, connection_info.password);
+
   /* send delist */
   request_body =
       g_strdup_printf
       ("{\"method\":\"delist\",\"deviceType\":\"edge\",\"edgeId\":\"%s\"}",
       edge_id);
-  if (_amqp_rpc_request (self->amqp_conn, amqp_channel, request_body,
+  if (_amqp_rpc_request (amqp_conn, amqp_channel, request_body,
           amqp_exchange_name, amqp_enroll_q_name, &response_body,
           &error) != CHAMGE_RETURN_OK) {
     if (error != NULL)
@@ -584,6 +629,28 @@ chamge_amqp_edge_backend_delist (ChamgeEdgeBackend * edge_backend)
   if (_validate_response (response_body, "delisted") != CHAMGE_RETURN_OK) {
     g_debug ("  received reponse must be [delisted], but [%s]", response_body);
     goto out;
+  }
+
+
+  if (amqp_conn != NULL) {
+    gint destroy_ret = 0;
+    amqp_r = amqp_channel_close (amqp_conn, amqp_channel, AMQP_REPLY_SUCCESS);
+    if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+      g_debug ("channel close failure >> %s", _amqp_rpc_reply_string (amqp_r));
+      goto out;
+    }
+    amqp_r = amqp_connection_close (amqp_conn, AMQP_REPLY_SUCCESS);
+    if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+      g_debug ("connection close failure >> %s",
+          _amqp_rpc_reply_string (amqp_r));
+      goto out;
+    }
+    destroy_ret = amqp_destroy_connection (amqp_conn);
+    if (destroy_ret < 0) {
+      g_debug ("connection destroy failure >> %s",
+          amqp_error_string2 (destroy_ret));
+      goto out;
+    }
   }
 
   ret = CHAMGE_RETURN_OK;
