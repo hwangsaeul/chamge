@@ -198,19 +198,90 @@ chamge_arbiter_agent_class_init (ChamgeArbiterAgentClass * klass)
 }
 
 static gboolean
-chamge_arbiter_agent_handle_enroll (ChamgeDBusArbiterManager * manager,
-    GDBusMethodInvocation * invocation, gpointer user_data)
+chamge_arbiter_agent_enroll (ChamgeArbiterAgent * self)
 {
-  ChamgeArbiterAgent *self = (ChamgeArbiterAgent *) user_data;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  ChamgeNodeState state = CHAMGE_NODE_STATE_NULL;
+
+  if (self->arbiter == NULL)
+    g_error ("arbiter is NULL");
+
+  /* check state to prevent terminating agent
+   * in case of it is called redundantly by dbus */
+  g_object_get (CHAMGE_NODE (self->arbiter), "state", &state, NULL);
+  if (state != CHAMGE_NODE_STATE_NULL) {
+    g_debug ("node state is not CHAMGE_NODE_STATE_NULL");
+    goto out;
+  }
+
+  ret = chamge_node_enroll (CHAMGE_NODE (self->arbiter), FALSE);
+  if (ret != CHAMGE_RETURN_OK)
+    g_error ("arbiter enroll failure");
+
+out:
+  return ret;
+}
+
+static gboolean
+chamge_arbiter_agent_activate (ChamgeArbiterAgent * self)
+{
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  ChamgeNodeState state = CHAMGE_NODE_STATE_NULL;
+
+  if (self->arbiter == NULL)
+    g_error ("arbiter is NULL");
+
+  /* check state to prevent terminating agent
+   * in case of it is called redundantly by dbus */
+  g_object_get (CHAMGE_NODE (self->arbiter), "state", &state, NULL);
+  if (state != CHAMGE_NODE_STATE_ENROLLED) {
+    g_debug ("node state is not CHAMGE_NODE_STATE_ENROLLED");
+    goto out;
+  }
+
+  ret = chamge_node_activate (CHAMGE_NODE (self->arbiter));
+  if (ret != CHAMGE_RETURN_OK)
+    g_error ("arbiter activate failure");
+
+out:
+  return ret;
+}
+
+static gboolean
+chamge_arbiter_agent_deactivate (ChamgeArbiterAgent * self)
+{
   ChamgeReturn ret = CHAMGE_RETURN_FAIL;
 
   if (self->arbiter == NULL)
     g_error ("arbiter is NULL");
-  ret = chamge_node_enroll (CHAMGE_NODE (self->arbiter), FALSE);
-  if (ret != CHAMGE_RETURN_OK) {
-    g_error ("arbiter enroll failure");
-  }
 
+  ret = chamge_node_deactivate (CHAMGE_NODE (self->arbiter));
+  if (ret != CHAMGE_RETURN_OK)
+    g_debug ("arbiter deactivate failure");
+
+  return ret;
+}
+
+static gboolean
+chamge_arbiter_agent_delist (ChamgeArbiterAgent * self)
+{
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+
+  if (self->arbiter == NULL)
+    g_error ("arbiter is NULL");
+
+  ret = chamge_node_delist (CHAMGE_NODE (self->arbiter));
+  if (ret != CHAMGE_RETURN_OK)
+    g_debug ("arbiter deliste failure");
+
+  return ret;
+}
+
+static gboolean
+chamge_arbiter_agent_handle_enroll (ChamgeDBusArbiterManager * manager,
+    GDBusMethodInvocation * invocation, gpointer user_data)
+{
+  chamge_arbiter_agent_enroll ((ChamgeArbiterAgent *) user_data);
   chamge_dbus_arbiter_manager_complete_enroll (manager, invocation);
 
   return TRUE;
@@ -220,13 +291,8 @@ static gboolean
 chamge_arbiter_agent_handle_delist (ChamgeDBusArbiterManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeArbiterAgent *self = (ChamgeArbiterAgent *) user_data;
-  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  chamge_arbiter_agent_delist ((ChamgeArbiterAgent *) user_data);
 
-  ret = chamge_node_delist (CHAMGE_NODE (self->arbiter));
-  if (ret != CHAMGE_RETURN_OK) {
-    g_error ("arbiter delist failure");
-  }
 
   chamge_dbus_arbiter_manager_complete_delist (manager, invocation);
 
@@ -237,13 +303,8 @@ static gboolean
 chamge_arbiter_agent_handle_activate (ChamgeDBusArbiterManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeArbiterAgent *self = (ChamgeArbiterAgent *) user_data;
-  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  chamge_arbiter_agent_activate ((ChamgeArbiterAgent *) user_data);
 
-  ret = chamge_node_activate (CHAMGE_NODE (self->arbiter));
-  if (ret != CHAMGE_RETURN_OK) {
-    g_error ("arbiter activate failure");
-  }
 
   chamge_dbus_arbiter_manager_complete_activate (manager, invocation);
 
@@ -254,13 +315,8 @@ static gboolean
 chamge_arbiter_agent_handle_deactivate (ChamgeDBusArbiterManager * manager,
     GDBusMethodInvocation * invocation, gpointer user_data)
 {
-  ChamgeArbiterAgent *self = (ChamgeArbiterAgent *) user_data;
-  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+  chamge_arbiter_agent_deactivate ((ChamgeArbiterAgent *) user_data);
 
-  ret = chamge_node_deactivate (CHAMGE_NODE (self->arbiter));
-  if (ret != CHAMGE_RETURN_OK) {
-    g_error ("arbiter deactivate failure");
-  }
 
   chamge_dbus_arbiter_manager_complete_deactivate (manager, invocation);
 
@@ -510,6 +566,7 @@ chamge_arbiter_agent_startup (GApplication * app)
 {
   ChamgeArbiterAgent *self = CHAMGE_ARBITER_AGENT (app);
   g_autofree gchar *uid = NULL;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
 
   uid = g_uuid_string_random ();
   uid = g_compute_checksum_for_string (G_CHECKSUM_SHA256, uid, strlen (uid));
@@ -528,6 +585,14 @@ chamge_arbiter_agent_startup (GApplication * app)
       G_CALLBACK (hub_enrolled_cb), self);
   g_signal_connect (self->arbiter, "hub-delisted",
       G_CALLBACK (hub_delisted_cb), self);
+  ret = chamge_arbiter_agent_enroll (self);
+  if (ret != CHAMGE_RETURN_OK) {
+    g_error ("failed to enroll");
+  }
+  ret = chamge_arbiter_agent_activate (self);
+  if (ret != CHAMGE_RETURN_OK) {
+    g_error ("failed to avtivate");
+  }
 }
 
 int
