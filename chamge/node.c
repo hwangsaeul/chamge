@@ -388,7 +388,6 @@ chamge_node_user_command (ChamgeNode * self, const gchar * cmd, gchar ** out,
   ChamgeNodeClass *klass;
   ChamgeReturn ret = CHAMGE_RETURN_OK;
   ChamgeNodePrivate *priv = chamge_node_get_instance_private (self);
-  g_autoptr (GMutexLocker) locker = NULL;
 
   g_return_val_if_fail (CHAMGE_IS_NODE (self), CHAMGE_RETURN_FAIL);
   g_return_val_if_fail (priv->state == CHAMGE_NODE_STATE_ACTIVATED,
