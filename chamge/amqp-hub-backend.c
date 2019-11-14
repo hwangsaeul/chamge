@@ -104,6 +104,43 @@ _amqp_rpc_reply_string (amqp_rpc_reply_t r)
   }
 }
 
+inline static const gchar *
+_amqp_get_rpc_reply_string (amqp_rpc_reply_t r)
+{
+  if (r.reply_type == AMQP_RESPONSE_NORMAL) {
+    return "response normal";
+  } else if (r.reply_type == AMQP_RESPONSE_NONE) {
+    return "reply type is missing";
+  } else if (r.reply_type == AMQP_RESPONSE_LIBRARY_EXCEPTION) {
+    return amqp_error_string2 (r.library_error);
+  } else if (r.reply_type == AMQP_RESPONSE_SERVER_EXCEPTION) {
+    int ret = 0;
+    static char str[512] = { 0 };
+
+    if (r.reply.id == AMQP_CONNECTION_CLOSE_METHOD) {
+      amqp_connection_close_t *msg =
+          (amqp_connection_close_t *) r.reply.decoded;
+      ret =
+          g_snprintf (str, sizeof (str),
+          "server connection error %d, message: %.*s", msg->reply_code,
+          (int) msg->reply_text.len, (char *) msg->reply_text.bytes);
+    } else if (r.reply.id == AMQP_CHANNEL_CLOSE_METHOD) {
+      amqp_channel_close_t *msg = (amqp_channel_close_t *) r.reply.decoded;
+      ret =
+          g_snprintf (str, sizeof (str),
+          "server channel error %d, message: %.*s", msg->reply_code,
+          (int) msg->reply_text.len, (char *) msg->reply_text.bytes);
+    } else {
+      ret =
+          g_snprintf (str, sizeof (str),
+          "unknown server error, method id 0x%08X", r.reply.id);
+    }
+    return ret >= 0 ? str : NULL;
+  }
+  g_error ("rpc reply type is abnormal. 0x%x", r.reply_type);
+  return "rpc replay type is abnormal";
+}
+
 static ChamgeReturn
 _amqp_rpc_login (amqp_connection_state_t amqp_conn, amqp_socket_t * amqp_socket,
     const gchar * url, guint channel, GError ** error)
@@ -887,6 +924,141 @@ chamge_amqp_hub_backend_deactivate (ChamgeHubBackend * hub_backend)
   return CHAMGE_RETURN_OK;
 }
 
+gchar *_get_queue_name (const gchar * request);
+
+/*gchar *
+_get_queue_name (const gchar * request)
+{
+  g_autoptr (JsonParser) parser = json_parser_new ();
+  g_autoptr (GError) error = NULL;
+  const gchar *name = NULL;
+
+  JsonNode *root = NULL;
+  JsonObject *json_object = NULL;
+
+  if (!json_parser_load_from_data (parser, request, strlen (request), &error)) {
+    g_debug ("failed to parse body: %s", error->message);
+    return NULL;
+  }
+
+  root = json_parser_get_root (parser);
+  json_object = json_node_get_object (root);
+  if (json_object_has_member (json_object, "to")) {
+    JsonNode *node = json_object_get_member (json_object, "to");
+    name = json_node_get_string (node);
+    return g_strdup (name);
+  }
+  return NULL;
+}
+*/
+
+static ChamgeReturn
+chamge_amqp_hub_backend_user_command (ChamgeHubBackend *
+    hub_backend, const gchar * cmd, gchar ** out, GError ** error)
+{
+  ChamgeAmqpHubBackend *self = CHAMGE_AMQP_HUB_BACKEND (hub_backend);
+  g_autofree gchar *amqp_uri = NULL;
+  struct amqp_connection_info connection_info;
+  amqp_rpc_reply_t amqp_r;
+  amqp_connection_state_t amqp_conn;
+  amqp_socket_t *amqp_socket = NULL;
+
+  g_autofree gchar *amqp_exchange_name = NULL;
+  gint amqp_channel = 0;
+  ChamgeReturn ret = CHAMGE_RETURN_FAIL;
+
+  amqp_uri = g_settings_get_string (self->settings, "amqp-uri");
+  g_assert_nonnull (amqp_uri);
+
+  if (amqp_parse_url (amqp_uri, &connection_info) != AMQP_STATUS_OK) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_INVALID_PARAMETER, "url pasring failure");
+    goto out;
+  }
+
+  amqp_channel = g_settings_get_int (self->settings, "amqp-channel");
+  amqp_exchange_name =
+      g_settings_get_string (self->settings, "enroll-exchange-name");
+
+  g_debug ("[config] channel : %d, enroll-exchange-name : %s",
+      amqp_channel, amqp_exchange_name);
+
+  amqp_conn = amqp_new_connection ();
+  amqp_socket = amqp_tcp_socket_new (amqp_conn);
+  g_assert_nonnull (amqp_socket);
+
+  if (amqp_socket_open (amqp_socket,
+          connection_info.host, connection_info.port)) {
+    g_set_error_literal (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "socket open failure");
+    goto out;
+  }
+
+  /* TODO: The authentication method should be EXTERNAL
+   * if we don't want to share user/passwd
+   */
+  amqp_r = amqp_login (amqp_conn, connection_info.vhost, 0, 131072, 0,
+      AMQP_SASL_METHOD_PLAIN, connection_info.user, connection_info.password);
+  if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "login failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_r));
+    goto out;
+  }
+  if (!amqp_channel_open (amqp_conn, amqp_channel)) {
+    g_set_error (error, CHAMGE_BACKEND_ERROR,
+        CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "channel open failure >> %s",
+        _amqp_get_rpc_reply_string (amqp_get_rpc_reply (amqp_conn)));
+    goto out;
+  }
+
+  g_debug ("success to login %s:%d/%s id[%s] pwd[%s]",
+      connection_info.host, connection_info.port,
+      connection_info.vhost, connection_info.user, connection_info.password);
+
+  ret =
+      _amqp_rpc_request (amqp_conn, amqp_channel, cmd,
+      amqp_exchange_name, _get_queue_name (cmd), out, error);
+  if (ret != CHAMGE_RETURN_OK && *error != NULL) {
+    g_debug ("rpc request failure >> %s", (*error)->message);
+    goto out;
+  }
+
+  if (amqp_conn != NULL) {
+    gint destroy_ret = 0;
+    amqp_r = amqp_channel_close (amqp_conn, amqp_channel, AMQP_REPLY_SUCCESS);
+    if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE, "channel close failure >> %s",
+          _amqp_get_rpc_reply_string (amqp_r));
+      ret = CHAMGE_RETURN_FAIL;
+      goto out;
+    }
+    amqp_r = amqp_connection_close (amqp_conn, AMQP_REPLY_SUCCESS);
+    if (amqp_r.reply_type != AMQP_RESPONSE_NORMAL) {
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+          "connection close failure >> %s",
+          _amqp_get_rpc_reply_string (amqp_r));
+      ret = CHAMGE_RETURN_FAIL;
+      goto out;
+    }
+    destroy_ret = amqp_destroy_connection (amqp_conn);
+    if (destroy_ret < 0) {
+      g_set_error (error, CHAMGE_BACKEND_ERROR,
+          CHAMGE_BACKEND_ERROR_OPERATION_FAILURE,
+          "connection destroy failure >> %s", amqp_error_string2 (destroy_ret));
+      ret = CHAMGE_RETURN_FAIL;
+      goto out;
+    }
+  }
+
+out:
+  return ret;
+}
+
+
+
 static void
 chamge_amqp_hub_backend_dispose (GObject * object)
 {
@@ -918,6 +1090,7 @@ chamge_amqp_hub_backend_class_init (ChamgeAmqpHubBackendClass * klass)
   backend_class->delist = chamge_amqp_hub_backend_delist;
   backend_class->activate = chamge_amqp_hub_backend_activate;
   backend_class->deactivate = chamge_amqp_hub_backend_deactivate;
+  backend_class->user_command_send = chamge_amqp_hub_backend_user_command;
 
 }
 

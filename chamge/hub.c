@@ -136,6 +136,18 @@ chamge_hub_deactivate (ChamgeNode * node)
   return ret;
 }
 
+static ChamgeReturn
+chamge_hub_user_command (ChamgeNode * node, const gchar * cmd, gchar ** out,
+    GError ** error)
+{
+  ChamgeHub *self = CHAMGE_HUB (node);
+  ChamgeHubPrivate *priv = chamge_hub_get_instance_private (self);
+
+  return chamge_hub_backend_user_command_send (priv->hub_backend, cmd, out,
+      error);
+}
+
+
 static void
 chamge_hub_dispose (GObject * object)
 {
@@ -208,6 +220,7 @@ chamge_hub_class_init (ChamgeHubClass * klass)
   node_class->delist = chamge_hub_delist;
   node_class->activate = chamge_hub_activate;
   node_class->deactivate = chamge_hub_deactivate;
+  node_class->user_command = chamge_hub_user_command;
 
   klass->get_uid = chamge_hub_get_uid_default;
 }
