@@ -230,6 +230,20 @@ chamge_hub_backend_deactivate (ChamgeHubBackend * self)
   return ret;
 }
 
+ChamgeReturn
+chamge_hub_backend_user_command_send (ChamgeHubBackend * self,
+    const gchar * cmd, gchar ** out, GError ** error)
+{
+  ChamgeHubBackendClass *klass;
+  g_return_val_if_fail (CHAMGE_IS_HUB_BACKEND (self), CHAMGE_RETURN_FAIL);
+
+  klass = CHAMGE_HUB_BACKEND_GET_CLASS (self);
+  g_return_val_if_fail (klass->user_command != NULL, CHAMGE_RETURN_FAIL);
+
+  return klass->user_command_send (self, cmd, out, error);
+}
+
+
 void
 chamge_hub_backend_set_user_command_handler (ChamgeHubBackend * self,
     ChamgeHubBackendUserCommand user_command)

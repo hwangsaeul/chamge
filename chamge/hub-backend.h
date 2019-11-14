@@ -47,6 +47,11 @@ struct _ChamgeHubBackendClass
                                                  const gchar          *cmd,
                                                  gchar               **response,
                                                  GError              **error);
+
+  ChamgeReturn  (* user_command_send)          (ChamgeHubBackend      *self,
+                                                 const gchar          *cmd,
+                                                 gchar               **response,
+                                                 GError              **error);
 };
 typedef ChamgeReturn (*ChamgeHubBackendUserCommand)    (const gchar          *cmd,
                                                         gchar               **response,
@@ -62,6 +67,11 @@ ChamgeReturn            chamge_hub_backend_delist      (ChamgeHubBackend     *se
 ChamgeReturn            chamge_hub_backend_activate    (ChamgeHubBackend     *self);
 
 ChamgeReturn            chamge_hub_backend_deactivate  (ChamgeHubBackend     *self);
+
+ChamgeReturn            chamge_hub_backend_user_command_send (ChamgeHubBackend    *self,
+                                                         const gchar         *cmd,
+                                                         gchar              **out,
+                                                         GError             **error);
 
 void  chamge_hub_backend_set_user_command_handler      (ChamgeHubBackend     *self,
                                                         ChamgeHubBackendUserCommand
