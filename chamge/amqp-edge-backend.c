@@ -21,6 +21,7 @@
 
 #include "amqp-edge-backend.h"
 #include "amqp-source.h"
+#include "common.h"
 #include "glib-compat.h"
 
 #include <gio/gio.h>
@@ -935,7 +936,7 @@ chamge_amqp_edge_backend_class_init (ChamgeAmqpEdgeBackendClass * klass)
 static void
 chamge_amqp_edge_backend_init (ChamgeAmqpEdgeBackend * self)
 {
-  self->settings = g_settings_new (AMQP_EDGE_BACKEND_SCHEMA_ID);
+  self->settings = chamge_common_gsettings_new (AMQP_EDGE_BACKEND_SCHEMA_ID);
   g_assert_nonnull (self->settings);
 
   self->amqp_conn = amqp_new_connection ();
