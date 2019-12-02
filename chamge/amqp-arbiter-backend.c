@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include "amqp-arbiter-backend.h"
+#include "common.h"
 #include "glib-compat.h"
 
 #include <gio/gio.h>
@@ -868,7 +869,7 @@ static void
 chamge_amqp_arbiter_backend_init (ChamgeAmqpArbiterBackend * self)
 {
   /* TODO: load settings from schema source */
-  self->settings = g_settings_new (AMQP_ARBITER_BACKEND_SCHEMA_ID);
+  self->settings = chamge_common_gsettings_new (AMQP_ARBITER_BACKEND_SCHEMA_ID);
 
   self->amqp_conn = amqp_new_connection ();
   self->amqp_socket = amqp_tcp_socket_new (self->amqp_conn);

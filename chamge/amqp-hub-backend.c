@@ -19,6 +19,7 @@
 #include "config.h"
 
 #include "amqp-hub-backend.h"
+#include "common.h"
 
 #include <gio/gio.h>
 #include <amqp.h>
@@ -1097,7 +1098,7 @@ chamge_amqp_hub_backend_class_init (ChamgeAmqpHubBackendClass * klass)
 static void
 chamge_amqp_hub_backend_init (ChamgeAmqpHubBackend * self)
 {
-  self->settings = g_settings_new (AMQP_HUB_BACKEND_SCHEMA_ID);
+  self->settings = chamge_common_gsettings_new (AMQP_HUB_BACKEND_SCHEMA_ID);
   g_assert_nonnull (self->settings);
 
   self->amqp_conn = amqp_new_connection ();

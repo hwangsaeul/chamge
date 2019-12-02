@@ -1,6 +1,6 @@
 /**
  *  Copyright 2019 SK Telecom Co., Ltd.
- *    Author: Jeongseok Kim <jeongseok.kim@sk.com>
+ *    Author: Jakub Adam <jakub.adam@collabora.com>
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,19 +16,22 @@
  *
  */
 
-#ifndef __CHAMGE_H__
-#define __CHAMGE_H__
+#ifndef __CHAMGE_COMMON_H__
+#define __CHAMGE_COMMON_H__
 
-#define __CHAMGE_INSIDE__
+#if !defined(__CHAMGE_INSIDE__) && !defined(CHAMGE_COMPILATION)
+#error "Only <chamge/chamge.h> can be included directly."
+#endif
 
-#include <chamge/common.h>
+#include <gio/gio.h>
 #include <chamge/types.h>
-#include <chamge/enumtypes.h>
-#include <chamge/node.h>
-#include <chamge/edge.h>
-#include <chamge/hub.h>
-#include <chamge/arbiter.h>
 
-#undef __CHAMGE_INSIDE__
+G_BEGIN_DECLS
 
-#endif // __CHAMGE_H__
+CHAMGE_API_EXPORT
+GSettings*      chamge_common_gsettings_new            (const gchar *schema_id);
+
+G_END_DECLS
+
+#endif //__CHAMGE_COMMON_H__
+
