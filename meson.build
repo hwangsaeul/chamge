@@ -46,8 +46,11 @@ gio_dep = [dependency('gio-2.0', version: glib_req_version,
 gobject_dep = dependency('gobject-2.0', version: glib_req_version,
     fallback: ['glib', 'libgobject_dep'])
 
-# FIXME: old meson fails to get dependency if `pkg-config --cflags` returns zero
-if meson.version().version_compare('>= 0.46.0')
+# meson fails to get dependency if `pkg-config --cflags` returns zero
+r = run_command('pkg-config', '--version')
+pkgconfig_version = r.stdout().strip()
+
+if pkgconfig_version.version_compare('> 0.29.1')
   rabbitmq_dep = dependency('librabbitmq', version: '>= 0.7.0')
 else
   rabbitmq_dep = declare_dependency(link_args: ['-lrabbitmq'])
