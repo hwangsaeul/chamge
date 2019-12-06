@@ -15,9 +15,8 @@ foreach agent: agents
     src_file,
     install: true,
     include_directories: chamge_incs,
-    dependencies : [ libgaeguli_dep ],
     c_args: [ chamge_agent_c_args, '-DG_LOG_DOMAIN="CHAMGE-ARBITER"' ],
-  dependencies: [ gobject_dep, gio_dep, libchamge_dbus_dep, libchamge_dep, json_glib_dep ],
+    dependencies: [ libchamge_dbus_dep, libchamge_dep, json_glib_dep ],
   )
 
 endforeach
