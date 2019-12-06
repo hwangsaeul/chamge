@@ -66,6 +66,7 @@ common_ldflags = [ ]
 
 subdir('glib-compat')
 subdir('chamge')
+subdir('hwangsaeul')
 subdir('agent')
 subdir('tests')
 subdir('examples')
