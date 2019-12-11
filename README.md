@@ -1,6 +1,6 @@
 [![Build Status](https://dev.azure.com/hwangsaeul/hwangsaeul/_apis/build/status/hwangsaeul.chamge?branchName=master)](https://dev.azure.com/hwangsaeul/hwangsaeul/_build/latest?definitionId=5&branchName=master)
 
-# Gaeul
+# Chamge
 
 Chamge[tʃɑmge] is a small crab in Korean and this module aims to provide control channel
 to the SRT relay server([hwangsae](https://github.com/hwangsaeul/hwangsae)) and 
