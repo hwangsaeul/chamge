@@ -44,6 +44,64 @@ Hub is a connection broker module for srt relay servers.
 ### Agents
 Role of agents are for communicating with another process. Agents include D-BUS api that is created by code generater from defined xml in the path of chamge/dbus/. Manager server's RESET Api communicate with Arbiter via D-BUS(chamge-arbiter-agent).
 
+## D-BUS API
+
+### Arbiter D-BUS API
+
+**Status**
+Retrieves the agent state, possible values are:
+*   0x0 = NULL
+*   0x1 = ENROLLED
+*   0x2 = ACTIVATED
+
+**Enroll**
+Enrolls Edge device in the network
+
+**Delist**
+Delists Edge device in the network
+
+**Activate**
+Activates Edge device
+
+**Deactivate**
+Deactivates Edge device
+
+**UserCommand**
+Send user comamnd to a device
+
+*Arguments*
+*   command (s): Command to send
+
+*Return*
+*   result (i): Response status code
+*   response (s): Response data
+
+### Edge D-BUS API
+
+**Status**
+Retrieves the agent state, possible values are:
+*   0x0 = NULL
+*   0x1 = ENROLLED
+*   0x2 = ACTIVATED
+
+**Enroll**
+Enrolls Edge device in the network
+
+**Delist**
+Delists Edge device in the network
+
+**Activate**
+Activates Edge device
+
+**Deactivate**
+Deactivates Edge device
+
+**RequestSRTConnectionURI**
+Request an SRT connection URI
+
+*Return*
+*   URI (s): URI to use to access SRT streaming.
+
 ## Build from sources
 To build the from sources follow the procedure described in
 
