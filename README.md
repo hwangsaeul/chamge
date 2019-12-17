@@ -7,7 +7,7 @@ to the SRT relay server([hwangsae](https://github.com/hwangsaeul/hwangsae)) and
 Edge([gaeguli](https://github.com/hwangsaeul/gaeguli)).
 
 This software is an [AMQP](https://www.rabbitmq.com/protocols.html#amqp-091) client
-to gather information about edge and will instanciate the SRT relay on demand
+to gather information about edge and will instantiate the SRT relay on demand
 according to the current load.
 
 <!--
@@ -30,19 +30,35 @@ style CDB fill:#ccf,stroke:#f66
 ## Overview
 
 ### Broker types
-There are three modules for connection broker API. Theses module's states are enrolled, activated, deactivated, delisted.
+The connection broker API consists of three modules: Edge, Arbiter and Hub. Each broker instance can find itself in one of the following states: null, enrolled and activated.
 
 #### Edge
-Edge is a connection broker module for srt source devices. 
+Edge is a connection broker module for SRT Source Devices.
 
 #### Arbiter
-Arbiter is a connection broker module for srt management servers.
+Arbiter is a connection broker module for SRT Management Servers.
 
 #### Hub
-Hub is a connection broker module for srt relay servers.
+Hub is a connection broker module for SRT Relay Servers.
+
+### States and transitions
+
+### Broker types states
+*   null: this is the default initial state
+*   enrolled: in this state the instance is registered in the message broker and able to exchange messages
+*   activated: in this state the instance is ready to accept requests
+
+### Broker types requests and transitions
+In order to become an active part of the system the `node` needs to transititon from the `null` state to the `active` one. Bellow is the list of requests the `node` can send and the transitions.
+*   enroll: in the `null` or `initial` state the `node` performs this request using the backend to transition to the `enrolled` state.
+*   activate: in the `enrolled` state the `node` performs this request using the backend to transition to the `activated` state.
+*   deactivate: in the `activated` state the `node` performs this request using the backend to transition to the `enroll` state.
+*   delist: in the `enrolled` state the `node` performs this request using the backend to transition to the `initial` state.
+
+![states-diagram](./docs/images/states-diagram.jpg)
 
 ### Agents
-Role of agents are for communicating with another process. Agents include D-BUS api that is created by code generater from defined xml in the path of chamge/dbus/. Manager server's RESET Api communicate with Arbiter via D-BUS(chamge-arbiter-agent).
+Role of agents are for communicating with another process. Agents include D-BUS API that is created by code generator from defined XML in the path of chamge/dbus/. Manager server's RESET API communicate with Arbiter via D-BUS(chamge-arbiter-agent).
 
 ## D-BUS API
 
@@ -67,7 +83,7 @@ Activates Edge device
 Deactivates Edge device
 
 **UserCommand**
-Send user comamnd to a device
+Send user commamnd to a device
 
 *Arguments*
 *   command (s): Command to send
@@ -103,7 +119,7 @@ Request an SRT connection URI
 *   URI (s): URI to use to access SRT streaming.
 
 ## Build from sources
-To build the from sources follow the procedure described in
+To build from sources follow the procedure described in
 
 [Build from sources](https://github.com/hwangsaeul/hwangsaeul.github.io/blob/master/build_from_sources.md)
 
