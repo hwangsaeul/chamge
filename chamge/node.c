@@ -179,6 +179,12 @@ chamge_node_class_init (ChamgeNodeClass * klass)
   g_object_class_install_properties (object_class, G_N_ELEMENTS (properties),
       properties);
 
+  /**
+   * ChamgeNode::state_changed:
+   * @self: a #ChamgeNode object
+   *
+   * Signal to inform that the state of the Chamge device has changed.
+   */
   signals[SIG_STATE_CHANGED] =
       g_signal_new ("state-changed", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (ChamgeNodeClass, state_changed), NULL,

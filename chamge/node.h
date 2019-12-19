@@ -27,6 +27,14 @@
 #include <glib-object.h>
 #include <chamge/types.h>
 
+/**
+ * SECTION: node
+ * @Title: ChamgeNode
+ * @Short_description: Base object to buid different types of Chamge brokers
+ *
+ * A #ChamgeNode is a base object which implements the basic functionality present in every Chamge broker.
+ */
+
 G_BEGIN_DECLS
 
 #define CHAMGE_TYPE_NODE       (chamge_node_get_type ())
@@ -43,9 +51,6 @@ struct _ChamgeNodeClass
 {
   GObjectClass parent_class;
 
-  /* callbacks */
-  void (* state_changed)                (ChamgeNode *self, ChamgeNodeState state);
-
   /* virtual public methods */
   ChamgeReturn (* enroll)               (ChamgeNode *self);
   ChamgeReturn (* delist)               (ChamgeNode *self);
@@ -55,23 +60,86 @@ struct _ChamgeNodeClass
 
   gchar *      (* get_uid)              (ChamgeNode *self);
   ChamgeReturn (* user_command)         (ChamgeNode *self, const gchar* cmd, gchar **out, GError ** error);
+
+  /* signals */
+  /**
+   * ChamgeNodeClass::state_changed:
+   * @self: a #ChamgeNode object
+   *
+   * Signal to inform that the state of the Chamge device has changed.
+   */
+  void (* state_changed)                (ChamgeNode *self, ChamgeNodeState state);
+
 };
 
+/**
+ * chamge_node_enroll:
+ * @self: a #ChamgeNode object
+ * @lazy:
+ *
+ * Enrolls the node in the message broker
+ *
+ * Returns: a #ChamgeReturn object
+ */
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_enroll         (ChamgeNode *self, gboolean lazy);
 
+/**
+ * chamge_node_delist:
+ * @self: a #ChamgeNode object
+ *
+ * Delists the node from the message broker
+ *
+ * Returns: a #ChamgeReturn object
+ */
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_delist         (ChamgeNode *self);
 
+/**
+ * chamge_node_activate:
+ * @self:  a #ChamgeNode object
+ *
+ * Activates the node
+ *
+ * Returns: a #ChamgeReturn object
+ */
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_activate       (ChamgeNode *self);
 
+/**
+ * chamge_node_deactivate:
+ * @self: a #ChamgeNode object
+ *
+ * Deactivates the node
+ *
+ * Returns: a #ChamgeReturn object
+ */
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_deactivate     (ChamgeNode *self);
 
+/**
+ * chamge_node_get_uid:
+ * @self: a #ChamgeNode object
+ * @uid: unique #ChamgeNode identifier
+ *
+ * Gets the unique identifier for the #ChamgeNode.
+ *
+ * Returns: a #ChamgeReturn object
+ */
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_get_uid        (ChamgeNode *self, gchar ** uid);
 
+/**
+ * chamge_node_user_command:
+ * @self: a #ChamgeNode object
+ * @cmd: user command to send
+ * @out: response to user command
+ * @error: a #GError
+ *
+ * Sends a command using the message broker.
+ *
+ * Returns: a #ChamgeReturn object
+ */
 CHAMGE_API_EXPORT
 ChamgeReturn chamge_node_user_command   (ChamgeNode *self, const gchar *cmd, gchar **out, GError ** error);
 

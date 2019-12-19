@@ -30,6 +30,13 @@
 #define _CHAMGE_EXTERN         extern
 #endif
 
+
+/**
+ * SECTION: types
+ * @Title: Chamge Types
+ * @Short_description: Several types used to export APIs
+ */
+
 #define CHAMGE_API_EXPORT      _CHAMGE_EXTERN
 
 typedef enum {
