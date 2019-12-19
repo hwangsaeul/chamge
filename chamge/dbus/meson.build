@@ -46,5 +46,5 @@ libchamge_dbus = shared_library(
 
 libchamge_dbus_dep = declare_dependency(link_with: libchamge_dbus,
   include_directories: [ chamge_incs ],
-  dependencies: [ gio_dep, libchamge_dep ]
+  dependencies: [ gio_dep ]
 )
