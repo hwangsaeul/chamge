@@ -61,6 +61,7 @@ json_glib_dep = dependency ('json-glib-1.0', version: '>= 1.1.2')
 gnome = import('gnome')
 
 chamge_incs = include_directories('.', 'chamge', 'glib-compat')
+chamge_doc_incs = include_directories('chamge', 'chamge/dbus')
 
 common_ldflags = [ ]
 
@@ -70,6 +71,7 @@ subdir('hwangsaeul')
 subdir('agent')
 subdir('tests')
 subdir('examples')
+subdir('doc')
 
 if meson.version().version_compare('>= 0.46.0')
   python3 = import('python').find_installation()
