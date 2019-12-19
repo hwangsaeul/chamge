@@ -26,6 +26,14 @@
 
 #include <chamge/node.h>
 
+/**
+ * SECTION: arbiter
+ * @Title: ChamgeArbiter
+ * @Short_description: An object to handle Arbiter devices
+ *
+ * A #ChamgeArbiter is an object which implements the specific functionality present in every Arbiter device.
+ */
+
 G_BEGIN_DECLS
 
 #define CHAMGE_TYPE_ARBITER     (chamge_arbiter_get_type ())
@@ -51,9 +59,26 @@ struct _ChamgeArbiterClass
                                          const gchar   *uid);
 };
 
-CHAMGE_API_EXPORT
+/**
+ * chamge_arbiter_new:
+ * @uid: unique identifier for the #ChamgeNode
+ *
+ * Creates a new #ChamgeArbiter object
+ *
+ * Returns: the newly created object
+ */
+ CHAMGE_API_EXPORT
 ChamgeArbiter*  chamge_arbiter_new                      (const gchar   *uid);  
 
+/**
+ * chamge_arbiter_new_full:
+ * @uid: unique identifier for the #ChamgeNode
+ * @backend: the backend support for message broker
+ *
+ * Creates a new #ChamgeArbiter object with specific parameters
+ *
+ * Returns: the newly created object
+ */
 CHAMGE_API_EXPORT
 ChamgeArbiter*  chamge_arbiter_new_full                 (const gchar   *uid,
                                                          ChamgeBackend  bakend);

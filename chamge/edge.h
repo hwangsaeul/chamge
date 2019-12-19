@@ -26,6 +26,14 @@
 
 #include <chamge/node.h>
 
+/**
+ * SECTION: edge
+ * @Title: ChamgeEdge
+ * @Short_description: An object to handle Edge devices
+ *
+ * A #ChamgeEdge is an object which implements the specific functionality present in every Edge device.
+ */
+
 G_BEGIN_DECLS
 
 #define CHAMGE_TYPE_EDGE       (chamge_edge_get_type ())
@@ -41,19 +49,54 @@ struct _ChamgeEdgeClass
 
 
   /* signals */
+	/**
+   * ChamgeEdgeClass::user_command:  
+   * @self: a #ChamgeEdge object
+   * @cmd: command received
+   * @response: command response
+   * @error: a #GError object
+   *
+   * Signal to inform that the state of the Chamge device has changed.
+   */
   void (*user_command)                  (ChamgeEdge    *self,
                                          const gchar   *cmd,
                                          gchar        **response,
                                          GError       **error);
 };
 
+/**
+ * chamge_edge_new:
+ * @uid: unique identifier for the #ChamgeNode
+ *
+ * Creates a new #ChamgeEdge object
+ *
+ * Returns: the newly created object
+ */
 CHAMGE_API_EXPORT
 ChamgeEdge*    chamge_edge_new                          (const gchar   *uid);
 
+/**
+ * chamge_edge_new_full:
+ * @uid: unique identifier for the #ChamgeNode
+ * @backend: the backend support for message broker
+ *
+ * Creates a new #ChamgeEdge object with specific parameters
+ *
+ * Returns: the newly created object
+ */
 CHAMGE_API_EXPORT
 ChamgeEdge*    chamge_edge_new_full                     (const gchar   *uid,
                                                          ChamgeBackend  backend);
 
+/**
+ * chamge_edge_request_target_uri:
+ * @self: a #ChamgeEdge object
+ * @error: a #GError object
+ *
+ * Request the target URI
+ *
+ * Returns: the requested target URI
+ */
 CHAMGE_API_EXPORT
 gchar*          chamge_edge_request_target_uri          (ChamgeEdge    *self,
                                                          GError       **error);  

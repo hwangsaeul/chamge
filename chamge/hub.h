@@ -26,6 +26,14 @@
 
 #include <chamge/node.h>
 
+/**
+ * SECTION: hub
+ * @Title: ChamgeHub
+ * @Short_description: An object to handle Hub devices
+ *
+ * A #ChamgeHub is an object which implements the specific functionality present in every Hub device.
+ */
+
 G_BEGIN_DECLS
 
 #define CHAMGE_TYPE_HUB       (chamge_hub_get_type ())
@@ -46,13 +54,39 @@ struct _ChamgeHubClass
                                         GError       **error);
 };
 
+/**
+ * chamge_hub_new:
+ * @uid: unique identifier for the #ChamgeNode
+ *
+ * Creates a new #ChamgeHub object
+ *
+ * Returns: the newly created object
+ */
 CHAMGE_API_EXPORT
 ChamgeHub*    chamge_hub_new                          (const gchar   *uid);
 
+/**
+ * chamge_hub_new_full:
+ * @uid: unique identifier for the #ChamgeNode
+ * @backend: the backend support for message broker
+ *
+ * Creates a new #ChamgeHub object with specific parameters
+ *
+ * Returns: the newly created object
+ */
 CHAMGE_API_EXPORT
 ChamgeHub*    chamge_hub_new_full                     (const gchar   *uid,
                                                        ChamgeBackend  backend);
 
+/**
+ * chamge_hub_get_uid:
+ * @self: a #ChamgeHub object
+ * @uid: unique #ChamgeNode identifier
+ *
+ * Gets the unique identifier for the #ChamgeNode.
+ *
+ * Returns: a #ChamgeReturn object
+ */
 CHAMGE_API_EXPORT
 ChamgeReturn  chamge_hub_get_uid                     (ChamgeHub *self, gchar ** uid);
 
