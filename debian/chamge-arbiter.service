@@ -1,0 +1,12 @@
+[Unit]
+Description=Arbiter agent of Hwansaeul
+
+[Service]
+Type=simple
+Environment=GSETTINGS_BACKEND=keyfile
+User=hwangsaeul-chamge
+ExecStart=/usr/bin/chamge-arbiter-agent --backend=amqp
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
