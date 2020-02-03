@@ -61,8 +61,10 @@ build/
 /debian/.debhelper/
 /debian/debhelper-build-stamp
 /debian/files
+/debian/chamge-arbiter/
 /debian/chamge-tools/
 /debian/libchamge1/
 /debian/libchamge-dev/
 /debian/tmp/
 /debian/*.substvars
+/debian/*.debhelper

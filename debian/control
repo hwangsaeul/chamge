@@ -27,6 +27,15 @@ Description: Connection Broker API
  .
  This package contains development files for chamge.
 
+Package: chamge-arbiter
+Architecture: any
+Section: utils
+Depends: libchamge1 (= ${binary:Version}), ${misc:Depends}
+Description: Chamge Arbiter agent
+ Chamge is a connection broker API for SRT streaming service.
+ .
+ This package contains Chamge Arbiter binary and service file.
+
 Package: chamge-tools
 Architecture: any
 Section: utils
