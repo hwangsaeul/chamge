@@ -36,6 +36,8 @@ foreach xml: schema_xmls
   )
 endforeach
 
+install_data(sources: 'hwangsaeul.conf', install_dir: '/etc')
+
 source_h = [
   'common.h',
   'chamge.h',
