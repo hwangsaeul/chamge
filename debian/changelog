@@ -1,3 +1,12 @@
+chamge (0.10.1-0h8l0) unstable; urgency=medium
+
+  [ Jakub Adam ]
+  * debian: package chamge-arbiter-agent separately
+  * debian: add service file for arbiter agent
+  * common: load common configuration from /etc/hwangsaeul.conf
+
+ -- Justin Kim <jeongseok.kim@sk.com>  Tue, 11 Feb 2020 14:54:43 +0900
+
 chamge (0.10.0-0h8l0) unstable; urgency=medium
 
   * Initial release.
