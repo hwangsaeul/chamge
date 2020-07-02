@@ -21,12 +21,25 @@
 #define G_SETTINGS_ENABLE_BACKEND
 #include <gio/gsettingsbackend.h>
 
+#define HWANGSAEUL_CONF "hwangsaeul.conf"
+
 GSettings *
 chamge_common_gsettings_new (const gchar * schema_id)
 {
+  const gchar *config_path = "/etc/" HWANGSAEUL_CONF;
+
+  g_autofree gchar *user_config_path = NULL;
+  g_autoptr (GFile) config_file = NULL;
   g_autoptr (GSettingsBackend) backend = NULL;
 
-  backend = g_keyfile_settings_backend_new ("/etc/hwangsaeul.conf", "/", NULL);
+  user_config_path =
+      g_build_filename (g_get_user_config_dir (), HWANGSAEUL_CONF, NULL);
+  config_file = g_file_new_for_path (user_config_path);
+  if (g_file_query_exists (config_file, NULL)) {
+    config_path = user_config_path;
+  }
+
+  backend = g_keyfile_settings_backend_new (config_path, "/", NULL);
 
   return g_settings_new_with_backend (schema_id, backend);
 }
